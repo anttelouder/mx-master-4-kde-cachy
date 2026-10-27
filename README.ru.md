@@ -18,6 +18,12 @@ Logi Options+ на Linux нет. Этот проект переносит сам
 - **Вибро-уведомления** откуда угодно: `mouse-buzz COMPLETED` (16 встроенных сигналов). Примеры для
   хуков Claude Code и fish — в `extras/`. Выключение микрофона с мыши отвечает разной вибрацией.
 
+<p align="center">
+  <img src="docs/buttons.png" width="32%" alt="Вкладка «Кнопки»: профили приложений, крест жестов">
+  <img src="docs/ring-setup.png" width="32%" alt="Вкладка «Кольцо»: 8 мест, папки, вибрация">
+  <img src="docs/settings.png" width="32%" alt="Вкладка «Настройки»: DPI, вибрация, SmartShift">
+</p>
+
 ## Что нужно
 
 - CachyOS или другой дистрибутив на основе Arch, KDE Plasma 6 на **Wayland**
