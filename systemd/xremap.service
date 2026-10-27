@@ -1,0 +1,12 @@
+[Unit]
+Description=xremap — бинды мыши по приложениям
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+ExecStart=/usr/bin/xremap --watch=device --device "LogiOps Virtual Input" --device "Logitech USB Receiver Mouse" %h/.config/xremap/config.yml
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target

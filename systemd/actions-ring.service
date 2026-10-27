@@ -1,0 +1,12 @@
+[Unit]
+Description=Кольцо действий MX Master 4 (haptic-панель)
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+ExecStart=%h/.local/bin/actions-ring
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target

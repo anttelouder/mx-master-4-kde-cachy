@@ -1,0 +1,14 @@
+{
+    "KPlugin": {
+        "Id": "org.mxmaster4.widget",
+        "Name": "MX Master 4",
+        "Description": "MX Master 4: заряд, DPI, вибрация, SmartShift, кнопки и жесты по приложениям, кольцо действий",
+        "Icon": "input-mouse",
+        "Category": "System Information",
+        "Authors": [{ "Name": "Дмитрий Сарафанников" }],
+        "Version": "1.1",
+        "License": "MIT"
+    },
+    "KPackageStructure": "Plasma/Applet",
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

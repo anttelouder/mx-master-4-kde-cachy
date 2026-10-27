@@ -1,0 +1,81 @@
+{
+  "hover_haptic": "SUBTLE_COLLISION",
+  "activate_haptic": "DAMP_STATE_CHANGE",
+  "folder_haptic": "SHARP_STATE_CHANGE",
+  "items": [
+    {
+      "name": "Терминал",
+      "icon": "utilities-terminal",
+      "kind": "app",
+      "app": "org.kde.konsole"
+    },
+    {
+      "name": "Файлы",
+      "icon": "org.kde.dolphin",
+      "kind": "app",
+      "app": "org.kde.dolphin"
+    },
+    {
+      "name": "Kate",
+      "icon": "kate",
+      "kind": "app",
+      "app": "org.kde.kate"
+    },
+    {
+      "name": "Центр приложений",
+      "icon": "plasmadiscover",
+      "kind": "app",
+      "app": "org.kde.discover"
+    },
+    {
+      "name": "Скриншот области",
+      "icon": "spectacle",
+      "kind": "cmd",
+      "cmd": "spectacle --region"
+    },
+    {
+      "name": "Калькулятор",
+      "icon": "accessories-calculator",
+      "kind": "app",
+      "app": "org.kde.kcalc"
+    },
+    {
+      "name": "Параметры системы",
+      "icon": "preferences-system",
+      "kind": "app",
+      "app": "systemsettings"
+    },
+    {
+      "name": "Ещё",
+      "icon": "folder-favorites",
+      "kind": "folder",
+      "items": [
+        {
+          "name": "Просмотр изображений",
+          "icon": "gwenview",
+          "kind": "app",
+          "app": "org.kde.gwenview"
+        },
+        {
+          "name": "Документы",
+          "icon": "okular",
+          "kind": "app",
+          "app": "org.kde.okular"
+        },
+        {
+          "name": "Архивы",
+          "icon": "ark",
+          "kind": "app",
+          "app": "org.kde.ark"
+        },
+        {
+          "name": "Системный монитор",
+          "icon": "utilities-system-monitor",
+          "kind": "app",
+          "app": "org.kde.plasma-systemmonitor"
+        }
+      ]
+    }
+  ],
+  "apps": []
+}

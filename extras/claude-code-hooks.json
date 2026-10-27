@@ -1,0 +1,26 @@
+{
+  "Stop": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "[ -x ~/.local/bin/mouse-buzz ] && ~/.local/bin/mouse-buzz COMPLETED >/dev/null 2>&1 || true",
+          "async": true,
+          "timeout": 5
+        }
+      ]
+    }
+  ],
+  "Notification": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "[ -x ~/.local/bin/mouse-buzz ] && ~/.local/bin/mouse-buzz KNOCK >/dev/null 2>&1 || true",
+          "async": true,
+          "timeout": 5
+        }
+      ]
+    }
+  ]
+}
