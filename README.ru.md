@@ -28,6 +28,8 @@ Logi Options+ на Linux нет. Этот проект переносит сам
   <img src="docs/settings.png" width="32%" alt="Вкладка «Настройки»: DPI, вибрация, SmartShift">
 </p>
 
+Интерфейс на английском.
+
 ## Что нужно
 
 - CachyOS или другой дистрибутив на основе Arch, KDE Plasma 6 на **Wayland**

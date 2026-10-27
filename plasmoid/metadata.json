@@ -6,7 +6,7 @@
         "Icon": "input-mouse",
         "Category": "System Information",
         "Authors": [{ "Name": "Дмитрий Сарафанников" }],
-        "Version": "1.1.1",
+        "Version": "1.2.0",
         "License": "MIT"
     },
     "KPackageStructure": "Plasma/Applet",
