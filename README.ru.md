@@ -19,6 +19,10 @@ Logi Options+ на Linux нет. Этот проект переносит сам
   хуков Claude Code и fish — в `extras/`. Выключение микрофона с мыши отвечает разной вибрацией.
 
 <p align="center">
+  <img src="docs/ring.gif" width="332" alt="Кольцо действий: наведение отзывается вибрацией, папка открывает вложенное кольцо">
+</p>
+
+<p align="center">
   <img src="docs/buttons.png" width="32%" alt="Вкладка «Кнопки»: профили приложений, крест жестов">
   <img src="docs/ring-setup.png" width="32%" alt="Вкладка «Кольцо»: 8 мест, папки, вибрация">
   <img src="docs/settings.png" width="32%" alt="Вкладка «Настройки»: DPI, вибрация, SmartShift">

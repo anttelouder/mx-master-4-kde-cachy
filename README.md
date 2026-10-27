@@ -20,6 +20,10 @@ KDE Plasma 6 on Wayland for the **Logitech MX Master 4**:
   mouse answers with a distinct buzz for muted/unmuted.
 
 <p align="center">
+  <img src="docs/ring.gif" width="332" alt="Actions Ring: hover ticks the haptic motor, folders open a nested ring">
+</p>
+
+<p align="center">
   <img src="docs/buttons.png" width="32%" alt="Buttons tab: per-app profiles, gesture cross">
   <img src="docs/ring-setup.png" width="32%" alt="Ring tab: 8 slots, folders, haptic feedback">
   <img src="docs/settings.png" width="32%" alt="Settings tab: DPI, haptics, SmartShift">
