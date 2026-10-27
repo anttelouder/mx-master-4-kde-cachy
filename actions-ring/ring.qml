@@ -1,7 +1,7 @@
-// Кольцо действий: прозрачный layer-shell поверх активного экрана, кольцо у курсора.
-// Выбор — по углу от центра (мёртвая зона в середине), клик — выполнить или открыть папку.
-// Клик в центре / Esc — назад из папки, иначе закрыть; правый клик — закрыть.
-// Смена сектора → ring.hover() → вибрация в мыши. Пустые позиции не выбираются.
+// Actions ring: a transparent layer-shell over the active screen, the ring at the cursor.
+// Selection by the angle from the centre (dead zone in the middle), click — run or open a folder.
+// Click in the centre / Esc — back out of a folder, otherwise close; right click — close.
+// Sector change → ring.hover() → a buzz in the mouse. Empty slots cannot be selected.
 import QtQuick
 import QtQuick.Shapes
 import QtQuick.Window
@@ -35,7 +35,7 @@ Window {
     property real lastX: 0
     property real lastY: 0
 
-    // стек открытых папок: [{items, title}]
+    // stack of open folders: [{items, title}]
     property var levels: []
     readonly property var curItems: levels.length ? levels[levels.length - 1].items : ring.items
     readonly property string curTitle: levels.length ? levels[levels.length - 1].title : ring.title
@@ -59,7 +59,7 @@ Window {
 
     function place(x, y) {
         if (placed) return
-        // не даём кольцу вылезти за край экрана
+        // keep the ring from sticking out past the screen edge
         cx = Math.min(Math.max(x, outerR + 8), width - outerR - 8)
         cy = Math.min(Math.max(y, outerR + 8), height - outerR - 8)
         placed = true
@@ -73,7 +73,7 @@ Window {
         const dx = x - cx, dy = y - cy
         let idx = -1
         if (Math.hypot(dx, dy) > innerR * 0.7) {
-            const a = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360  // 0° — вверх, по часовой
+            const a = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360  // 0° is up, clockwise
             idx = Math.round(a / step) % count
             if (!curItems[idx]) idx = -1
         }
@@ -116,7 +116,7 @@ Window {
         function onHideRequested() { win.close() }
     }
 
-    // Если wl_pointer.enter не пришёл (курсор на другом экране), ставим по центру.
+    // If wl_pointer.enter never arrived (cursor on another screen), place it in the centre.
     Timer {
         id: fallback
         interval: 250
@@ -154,7 +154,7 @@ Window {
         y: win.cy - height / 2
         visible: win.placed
 
-        // фон кольца
+        // ring background
         Rectangle {
             anchors.fill: parent
             radius: width / 2
@@ -163,7 +163,7 @@ Window {
             border.width: 1
         }
 
-        // подсветка сектора — плавно доезжает до выбранного
+        // sector highlight — slides smoothly to the selection
         Shape {
             id: wedge
             anchors.fill: parent
@@ -183,13 +183,13 @@ Window {
                 PathAngleArc {
                     centerX: win.outerR; centerY: win.outerR
                     radiusX: win.innerR + 4; radiusY: win.innerR + 4
-                    moveToStart: false  // продолжить контур внешней дуги, иначе вместо клина два сегмента
+                    moveToStart: false  // continue the outer arc outline, otherwise two segments instead of a wedge
                     startAngle: -90 + win.step / 2; sweepAngle: -win.step
                 }
             }
         }
 
-        // иконки; у папки — точка-метка
+        // icons; a folder gets a dot marker
         Repeater {
             model: win.curItems
             delegate: Kirigami.Icon {
@@ -214,7 +214,7 @@ Window {
             }
         }
 
-        // центр: название выбранного действия, иначе — имя папки / кольца приложения
+        // centre: the name of the selected action, otherwise the folder / app ring name
         Rectangle {
             anchors.centerIn: parent
             width: win.innerR * 2; height: width

@@ -1,5 +1,5 @@
 [Unit]
-Description=xremap — бинды мыши по приложениям
+Description=xremap — per-app mouse bindings
 After=graphical-session.target
 PartOf=graphical-session.target
 

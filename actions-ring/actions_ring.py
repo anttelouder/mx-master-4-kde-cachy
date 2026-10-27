@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
-"""Кольцо действий для MX Master 4 на KDE Wayland — аналог Actions Ring из Logi Options+.
+"""Actions Ring for the MX Master 4 on KDE Wayland — a take on the Actions Ring from Logi Options+.
 
-    actions-ring              служба: держит скрытое окно-кольцо и канал к мыши
-    actions-ring show         показать кольцо у курсора (повторный вызов — закрыть)
+    actions-ring              service: keeps a hidden ring window and a channel to the mouse
+    actions-ring show         show the ring at the cursor (calling it again closes it)
     actions-ring hide
 
-Нажатие на haptic-панель → logid шлёт Meta+Shift+S → xremap (только с мыши)
-запускает `actions-ring show` → служба показывает кольцо через сокет
-$XDG_RUNTIME_DIR/actions-ring.sock. Окно — layer-shell поверх всего на активном
-экране; центр кольца ставится туда, где wl_pointer.enter сообщил курсор.
+Pressing the haptic panel → logid sends Meta+Shift+S → xremap (mouse only)
+runs `actions-ring show` → the service shows the ring through the socket
+$XDG_RUNTIME_DIR/actions-ring.sock. The window is a layer-shell overlay on the active
+screen; the ring centre is placed where wl_pointer.enter reported the cursor.
 
-При переходе курсора на другой сектор мышь коротко вибрирует (HID++ HAPTIC,
-канал к приёмнику держится открытым, отклик ~10 мс у активной мыши).
+When the cursor moves to another sector the mouse gives a short buzz (HID++ HAPTIC,
+the channel to the receiver is kept open, ~10 ms latency on an active mouse).
 
-Набор действий — ~/.config/actions-ring/ring.json (если нет — config/actions-ring.json),
-правится во вкладке «Кольцо» виджета мыши. Действие (kind): app — приложение по id
-.desktop, kde — глобальное действие KDE (kglobalaccel), cmd — команда, folder — вложенное
-кольцо. Кольца под приложения — в "apps": первое, у которого регулярка match совпала
-с классом активного окна; класс сообщает KWin-скрипт через D-Bus (org.mxmaster4.ActionsRing).
+The action set is ~/.config/actions-ring/ring.json (if missing — config/actions-ring.json),
+edited in the widget's "Ring" tab. Action (kind): app — an app by .desktop id,
+kde — a KDE global action (kglobalaccel), cmd — a command, folder — a nested
+ring. Per-app rings live in "apps": the first whose match regex matched
+the active window class; the class is reported by a KWin script over D-Bus (org.mxmaster4.ActionsRing).
 """
 import json
 import os
@@ -43,7 +43,7 @@ WAVEFORMS = {"SHARP_STATE_CHANGE": 0x00, "DAMP_STATE_CHANGE": 0x01, "SHARP_COLLI
 SLOTS = 8
 DBUS_NAME = "org.mxmaster4.ActionsRing"
 
-# Сообщает службе класс каждого активированного окна (кроме самого кольца).
+# Reports the class of every activated window to the service (except the ring itself).
 KWIN_SCRIPT = """
 function report(w) {
     if (!w || w.resourceClass === "actions-ring") return;
@@ -61,7 +61,7 @@ def client(cmd):
         s.connect(SOCK)
         s.sendall(cmd.encode() + b"\n")
     except OSError:
-        print("служба actions-ring не запущена", file=sys.stderr)
+        print("the actions-ring service is not running", file=sys.stderr)
         return 1
     return 0
 
@@ -76,7 +76,7 @@ def load_config():
 
 
 def slots(items):
-    """Ровно 8 позиций; пустая позиция — None (сектор не подсвечивается)."""
+    """Exactly 8 slots; an empty one is None (the sector is not highlighted)."""
     items = list(items or [])[:SLOTS]
     items += [None] * (SLOTS - len(items))
     return [i if i and (i.get("kind") or i.get("cmd") or i.get("items")) else None for i in items]
@@ -96,7 +96,7 @@ def argv_for(item):
 
 
 class Haptics(threading.Thread):
-    """Очередь на один сигнал: пока мышь отвечает, новые наведения вытесняют старые."""
+    """Queue of one: while the mouse is busy, new hovers push out the old ones."""
 
     def __init__(self):
         super().__init__(daemon=True)
@@ -122,12 +122,12 @@ class Haptics(threading.Thread):
         return self.mouse
 
     def run(self):
-        self.connect()  # прогрев: найти приёмник до первого показа
+        self.connect()  # warm-up: find the receiver before the first show
         while True:
             name = self.q.get()
             m = self.connect()
             if m and m.call(hidpp.F_HAPTIC, 4, bytes([WAVEFORMS[name]])) is None:
-                m.close()  # мышь уснула или переподключилась — откроем заново
+                m.close()  # the mouse fell asleep or reconnected — reopen it
                 self.mouse = None
 
 
@@ -148,7 +148,7 @@ def serve():
             self.haptics = haptics
             self.config = load_config()
             self.window_class = ""
-            self.recent = {}  # класс окна → заголовок, для выбора в виджете
+            self.recent = {}  # window class → caption, for picking in the widget
             self._items, self._title = slots(self.config.get("items")), ""
 
         @pyqtProperty("QVariantList", notify=changed)
@@ -166,7 +166,7 @@ def serve():
                 self.recent[cls] = caption
 
         def prepare(self):
-            """Перед показом: перечитать конфиг и выбрать кольцо под активное окно."""
+            """Before showing: re-read the config and pick the ring for the active window."""
             self.config = load_config()
             items, title = self.config.get("items"), ""
             for app in self.config.get("apps", []):
@@ -196,14 +196,14 @@ def serve():
         def run(self, item):
             self.haptics.play(self.config.get("activate_haptic", "DAMP_STATE_CHANGE"))
             argv = argv_for(item or {})
-            if argv:  # после скрытия окна, чтобы фокус успел вернуться
+            if argv:  # after the window is hidden, so focus has time to come back
                 QTimer.singleShot(60, lambda: subprocess.Popen(
                     argv, start_new_session=True,
                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))
 
     @pyqtClassInfo("D-Bus Interface", DBUS_NAME)
     class DBusApi(QObject):
-        """Наружу по D-Bus: KWin-скрипт сообщает активное окно, виджет берёт список недавних."""
+        """Exposed over D-Bus: the KWin script reports the active window, the widget fetches recent ones."""
 
         def __init__(self, ring):
             super().__init__()
@@ -214,7 +214,7 @@ def serve():
             self.ring.set_active_window(cls, caption)
 
         @pyqtSlot(result=str)
-        def recentWindows(self):  # JSON [{class, caption}], свежие первыми
+        def recentWindows(self):  # JSON [{class, caption}], newest first
             return json.dumps([{"class": c, "caption": t} for c, t in reversed(self.ring.recent.items())],
                               ensure_ascii=False)
 
@@ -228,7 +228,7 @@ def serve():
     bus.registerService(DBUS_NAME)
     bus_api = DBusApi(ring)
     bus.registerObject("/", bus_api, QDBusConnection.RegisterOption.ExportAllSlots)
-    # KWin выполнит этот файл в сессии пользователя — только в личном каталоге (0700), не в /tmp
+    # KWin will execute this file in the user session — only in a private directory (0700), not in /tmp
     script = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or os.path.expanduser("~/.cache"), "actions-ring-kwin.js")
     os.makedirs(os.path.dirname(script), exist_ok=True)
     fd = os.open(script, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
@@ -241,7 +241,7 @@ def serve():
         QDBusInterface("org.kde.KWin", f"/Scripting/Script{reply.arguments()[0]}",
                        "org.kde.kwin.Script", bus).call("run")
     else:
-        print("KWin-скрипт не загрузился: кольца под приложения не работают", file=sys.stderr)
+        print("the KWin script failed to load: per-app rings will not work", file=sys.stderr)
 
     if os.path.lexists(SOCK):
         os.unlink(SOCK)

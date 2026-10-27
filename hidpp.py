@@ -1,18 +1,18 @@
-"""Минимальный HID++ 2.0 клиент для MX Master 4 через Logitech-приёмник (/dev/hidraw*).
+"""Minimal HID++ 2.0 client for the MX Master 4 through a Logitech receiver (/dev/hidraw*).
 
-Общий для mouse-buzz.py, mousectl.py и кольца действий. Находит приёмник и слот мыши
-по фиче HAPTIC (0x19B0), кеширует hidraw/слот в ~/.cache/mouse-buzz.json; индексы фич
-узнаёт через ROOT.getFeature при каждом подключении и держит в памяти процесса.
+Shared by mouse-buzz.py, mousectl.py and the actions ring. Finds the receiver and the mouse slot
+by the HAPTIC feature (0x19B0), caches the hidraw/slot in ~/.cache/mouse-buzz.json; feature
+indices are looked up through ROOT.getFeature on every connection and kept in process memory.
 
-Особенности, пойманные 25–26.10.2026:
-- спящая мышь или пустой слот — приёмник отвечает на запись EPIPE;
-- после простоя мышь отвечает через ~0,9 с (активная — за ~6 мс), поэтому таймаут 1,5 с;
-- свой software id (0x0E), чтобы не путать ответы с трафиком logid;
-- hidraw раздаёт каждый ответ всем, кто открыл устройство, а наши процессы (виджет, кольцо,
-  mouse-buzz) ходят с одним software id — без очереди один забирал чужой ответ. Так в кэш
-  однажды попал индекс FEATURE SET вместо HAPTIC, и вибрация молча перестала работать.
-  Поэтому запрос-ответ идёт под общей блокировкой (flock), перед запросом старые ответы
-  вычитываются, а индексы фич в кэш больше не пишутся.
+Gotchas caught on 25–26.10.2026:
+- a sleeping mouse or an empty slot — the receiver answers the write with EPIPE;
+- after idling the mouse answers in ~0.9 s (active — in ~6 ms), hence the 1.5 s timeout;
+- its own software id (0x0E) so replies are not confused with logid traffic;
+- hidraw delivers every reply to everyone who opened the device, and our processes (widget, ring,
+  mouse-buzz) use a single software id — without queueing one of them grabbed someone else's reply.
+  That is how a FEATURE SET index once ended up in the cache instead of HAPTIC, and the haptics
+  silently stopped working. So a request-reply runs under a shared lock (flock), stale replies are
+  drained before a request, and feature indices are no longer written to the cache.
 """
 import contextlib
 import fcntl
@@ -34,12 +34,12 @@ F_DPI = 0x2201           # ADJUSTABLE DPI
 
 
 class NoMouse(Exception):
-    """Мышь не отвечает: выключена, спит слишком глубоко или не подключена."""
+    """The mouse is not responding: switched off, too deeply asleep, or not connected."""
 
 
 @contextlib.contextmanager
 def _exclusive():
-    """Один запрос-ответ на приёмнике за раз — между всеми нашими процессами."""
+    """One request-reply on the receiver at a time — across all our processes."""
     os.makedirs(os.path.dirname(LOCK), exist_ok=True)
     lock = os.open(LOCK, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
     try:
@@ -50,11 +50,11 @@ def _exclusive():
 
 
 def request(fd, dev, feat_idx, fn, params=b"", timeout=1.5):
-    """Длинный HID++ 2.0 запрос; возвращает параметры ответа или None (ошибка/таймаут)."""
+    """Long HID++ 2.0 request; returns the reply parameters or None (error/timeout)."""
     func = (fn << 4) | SW_ID
     msg = bytes([0x11, dev, feat_idx, func]) + params
     with _exclusive():
-        while select.select([fd], [], [], 0)[0]:       # опоздавшие ответы на прошлые запросы
+        while select.select([fd], [], [], 0)[0]:       # late replies to previous requests
             os.read(fd, 64)
         os.write(fd, msg.ljust(20, b"\0"))
         deadline = time.monotonic() + timeout
@@ -64,9 +64,9 @@ def request(fd, dev, feat_idx, fn, params=b"", timeout=1.5):
             r = os.read(fd, 64)
             if len(r) < 5 or r[1] != dev:
                 continue
-            if r[2] == 0xFF and r[3] == feat_idx and r[4] == func:   # ошибка HID++ 2.0 на наш запрос
+            if r[2] == 0xFF and r[3] == feat_idx and r[4] == func:   # HID++ 2.0 error for our request
                 return None
-            if r[0] == 0x10 and r[2] == 0x8F and r[3] == feat_idx:  # ошибка HID++ 1.0 (нет устройства)
+            if r[0] == 0x10 and r[2] == 0x8F and r[3] == feat_idx:  # HID++ 1.0 error (no device)
                 return None
             if r[2] == feat_idx and r[3] == func:
                 return r[4:]
@@ -84,7 +84,7 @@ def receivers():
 
 
 def discover():
-    """Перебор приёмников и слотов 1–6: где отвечает фича HAPTIC."""
+    """Scan the receivers and slots 1–6: wherever the HAPTIC feature answers."""
     feat = F_HAPTIC.to_bytes(2, "big")
     for path in receivers():
         try:
@@ -93,7 +93,7 @@ def discover():
             continue
         try:
             for dev in range(1, 7):
-                try:  # пустой слот или спящая мышь — приёмник отвечает EPIPE
+                try:  # empty slot or sleeping mouse — the receiver answers EPIPE
                     r = request(fd, dev, 0x00, 0, feat)  # ROOT.getFeature
                 except OSError:
                     continue
@@ -105,7 +105,7 @@ def discover():
 
 
 class Mouse:
-    """Открытое соединение с мышью; использовать через `with Mouse() as m:`."""
+    """An open connection to the mouse; use as `with Mouse() as m:`."""
 
     def __init__(self):
         self.fd = None
@@ -128,7 +128,7 @@ class Mouse:
             try:
                 self.fd = os.open(self.target["path"], os.O_RDWR)
                 self.features = {}
-                if self.feature_index(F_HAPTIC) is not None:  # в этом слоте мышь с вибрацией и она на связи
+                if self.feature_index(F_HAPTIC) is not None:  # this slot has a haptic-capable mouse and it is online
                     return self
             except (OSError, KeyError):
                 pass
@@ -150,7 +150,7 @@ class Mouse:
         return self.features[feature]
 
     def call(self, feature, fn, params=b""):
-        """Вызов функции фичи; None — фичи нет или мышь не ответила."""
+        """Call a feature function; None — no such feature or the mouse did not answer."""
         idx = self.feature_index(feature)
         if idx is None:
             return None

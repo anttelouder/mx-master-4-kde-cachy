@@ -1,7 +1,7 @@
-// Виджет «MX Master 4» для панели KDE Plasma 6.
-// Вся логика — в ~/.local/bin/mousectl (mousectl.py в корне репозитория): виджет вызывает
-// его через движок executable и разбирает JSON. Новая функция = новая команда mousectl
-// + элемент здесь; вкладка «Бинды» пока только показывает конфиг xremap (задел под редактор).
+// MX Master 4 widget for the KDE Plasma 6 panel.
+// All the logic lives in ~/.local/bin/mousectl (mousectl.py in the repo root): the widget calls
+// it through the executable engine and parses JSON. A new feature = a new mousectl command
+// + an element here; the "Buttons" tab so far only shows the xremap config (room for an editor).
 import QtQuick
 import QtQuick.Layouts
 import org.kde.plasma.plasmoid
@@ -16,13 +16,13 @@ PlasmoidItem {
 
     readonly property string mousectl: "~/.local/bin/mousectl"
     property var st: ({})
-    // вкладка «Кнопки»: профили приложений × кнопки (модель — buttons.py, через mousectl bindings)
-    property var bindData: ({})       // ответ bindings get: buttons, catalog, profiles
-    property var bindProfiles: []     // правимая копия профилей; последний — «Все приложения»
+    // "Buttons" tab: app profiles × buttons (model — buttons.py, via mousectl bindings)
+    property var bindData: ({})       // bindings get reply: buttons, catalog, profiles
+    property var bindProfiles: []     // editable copy of the profiles; the last one is "All applications"
     property int bindRev: 0
-    property int bindProfile: -1      // индекс в bindProfiles; -1 — ещё не загружено
-    property string bindKey: ""       // выбранная клавиша-слот (F13, KEY_FN_F4, WHEEL…)
-    property string bindStatus: ""    // «Сохраняю…», «Сохранено», ошибка
+    property int bindProfile: -1      // index in bindProfiles; -1 — not loaded yet
+    property string bindKey: ""       // selected key-slot (F13, KEY_FN_F4, WHEEL…)
+    property string bindStatus: ""    // "Saving…", "Saved", an error
     property string lastError: ""
 
     readonly property var mouse: st.mouse || ({})
@@ -35,12 +35,12 @@ PlasmoidItem {
     Plasmoid.icon: "input-mouse"
     Plasmoid.status: problem ? PlasmaCore.Types.NeedsAttentionStatus : PlasmaCore.Types.ActiveStatus
     toolTipMainText: "MX Master 4"
-    toolTipSubText: !online ? "Мышь не отвечает (спит или выключена)"
-                    : (logidLost ? "logid не видит мышь — выключи и включи её\n" : "")
-                      + "Заряд " + mouse.battery + "%" + (mouse.charging ? ", заряжается" : "")
+    toolTipSubText: !online ? "The mouse is not responding (asleep or switched off)"
+                    : (logidLost ? "logid cannot see the mouse — switch it off and on\n" : "")
+                      + "Battery " + mouse.battery + "%" + (mouse.charging ? ", charging" : "")
                       + " · " + mouse.dpi + " DPI"
 
-    // --- запуск mousectl ---
+    // --- running mousectl ---
     property int seq: 0
     property var callbacks: ({})
 
@@ -55,7 +55,7 @@ PlasmoidItem {
             let parsed = null
             try { parsed = JSON.parse(data.stdout) } catch (e) { parsed = null }
             if (parsed === null)
-                root.lastError = (data.stderr || data.stdout || "mousectl не ответил").trim()
+                root.lastError = (data.stderr || data.stdout || "mousectl did not respond").trim()
             else if (parsed.ok === false && parsed.error)
                 root.lastError = parsed.error
             else
@@ -65,7 +65,7 @@ PlasmoidItem {
     }
 
     function run(args, cb) {
-        // уникальный хвост-комментарий: одинаковые команды подряд не склеиваются движком
+        // unique trailing comment: identical commands in a row are not merged by the engine
         const cmd = mousectl + " " + args + " #" + (++seq)
         callbacks[cmd] = cb
         exec.connectSource(cmd)
@@ -81,7 +81,7 @@ PlasmoidItem {
         run("service " + name + " " + (on ? "start" : "stop"), r => refresh())
     }
     function loadBindings() {
-        if (bindSave.running) return   // не затирать правку, которая ещё не записана
+        if (bindSave.running) return   // do not overwrite an edit that has not been saved yet
         run("bindings get", r => {
             if (!r || !r.profiles) return
             root.bindData = r
@@ -93,7 +93,7 @@ PlasmoidItem {
     }
     function bindChanged() {
         bindRev++
-        bindStatus = "Сохраняю…"
+        bindStatus = "Saving…"
         bindSave.restart()
     }
     function setSlot(key, action) {
@@ -104,7 +104,7 @@ PlasmoidItem {
     function addProfile(app) {
         const keys = {}
         for (const b of bindData.buttons) for (const s of b.slots) keys[s.key] = { kind: "default" }
-        // новый профиль — первым: у него наивысший приоритет
+        // a new profile goes first: it has the highest priority
         bindProfiles.unshift({ name: app.name, icon: app.icon, app: app.id, apps: [], keys: keys, extra: {} })
         bindProfile = 0
         bindKey = ""
@@ -117,17 +117,17 @@ PlasmoidItem {
         bindChanged()
     }
     function resetDefaults() {
-        bindStatus = "Сохраняю…"
+        bindStatus = "Saving…"
         run("bindings reset", r => {
-            root.bindStatus = r && r.ok ? "Стандартная раскладка восстановлена" : "Не сохранилось"
+            root.bindStatus = r && r.ok ? "Default layout restored" : "Not saved"
             root.loadBindings()
         })
     }
-    // «C-Shift-t» → «Ctrl+Shift+T»
+    // "C-Shift-t" → "Ctrl+Shift+T"
     function humanKeys(k) {
         const mods = { "C": "Ctrl", "Ctrl": "Ctrl", "M": "Alt", "Alt": "Alt", "Shift": "Shift", "Super": "Meta", "Win": "Meta" }
         const names = { pageup: "PgUp", pagedown: "PgDn", left: "←", right: "→", up: "↑", down: "↓", tab: "Tab",
-                        esc: "Esc", enter: "Enter", space: "Пробел", backspace: "Backspace", delete: "Del",
+                        esc: "Esc", enter: "Enter", space: "Space", backspace: "Backspace", delete: "Del",
                         home: "Home", end: "End", minus: "-", equal: "=", comma: ",", dot: ".", slash: "/" }
         const parts = String(k).split("-")
         const key = parts.pop()
@@ -144,7 +144,7 @@ PlasmoidItem {
     function actionText(a, profile) {
         if (!a) return ""
         switch (a.kind) {
-        case "default": return "как везде"
+        case "default": return "inherited"
         case "nothing": return "—"
         case "preset": return bindCatalog[a.id] ? bindCatalog[a.id].name : a.id
         case "keys": return humanKeys(a.keys)
@@ -156,10 +156,10 @@ PlasmoidItem {
             const x = (ringData.shortcuts || []).find(s => s.component === a.component && s.name === a.name)
             return x ? x.friendly : a.name
         }
-        case "scroll": return "прокрутка вбок"
-        case "tabs": return "вкладки"
+        case "scroll": return "side scroll"
+        case "tabs": return "tabs"
         }
-        return a.label || "своё"
+        return a.label || "custom"
     }
     function actionIcon(a) {
         if (!a) return ""
@@ -181,14 +181,14 @@ PlasmoidItem {
         id: bindSave
         interval: 700
         onTriggered: root.run("bindings set " + root.encodeArg(JSON.stringify(root.bindProfiles)), r => {
-            root.bindStatus = r && r.ok ? "Сохранено" : "Не сохранилось" + (r && r.error ? ": " + r.error : "")
+            root.bindStatus = r && r.ok ? "Saved" : "Not saved" + (r && r.error ? ": " + r.error : "")
         })
     }
-    // percent-кодировка без символов, значимых для shell
+    // percent-encoding without characters that are significant to the shell
     function encodeArg(text) {
         return encodeURIComponent(text).replace(/[!'()*~]/g, c => "%" + c.charCodeAt(0).toString(16).toUpperCase())
     }
-    // evdev-код → имя клавиши xremap (для записи сочетания); модификаторы — null
+    // evdev code → xremap key name (for recording a combo); modifiers are null
     readonly property var evdevNames: {
         const t = { 1: "esc", 12: "minus", 13: "equal", 14: "backspace", 15: "tab", 26: "leftbrace",
                     27: "rightbrace", 28: "enter", 39: "semicolon", 40: "apostrophe", 41: "grave",
@@ -203,12 +203,12 @@ PlasmoidItem {
         return t
     }
 
-    // --- кольцо действий (вкладка «Кольцо») ---
-    // ringCfg правится на месте; ringRev — счётчик изменений, на него завязаны все привязки.
+    // --- actions ring ("Ring" tab) ---
+    // ringCfg is edited in place; ringRev is a change counter that all bindings depend on.
     property var ringData: ({})
     property var ringCfg: null
     property int ringRev: 0
-    property var ringPath: []         // индексы папок от корня кольца
+    property var ringPath: []         // folder indices from the ring root
     property int ringSlot: -1
 
     function loadRing() {
@@ -254,7 +254,7 @@ PlasmoidItem {
         else if (kind === "app") l[ringSlot] = { kind: "app", name: name, icon: "", app: "" }
         else if (kind === "kde") l[ringSlot] = { kind: "kde", name: name, icon: "", shortcut: null }
         else if (kind === "cmd") l[ringSlot] = { kind: "cmd", name: name, icon: "", cmd: "" }
-        else l[ringSlot] = { kind: "folder", name: name || "Папка", icon: "folder", items: [] }
+        else l[ringSlot] = { kind: "folder", name: name || "Folder", icon: "folder", items: [] }
         ringChanged()
     }
     function moveSlot(delta) {
@@ -297,7 +297,7 @@ PlasmoidItem {
     }
     onExpandedChanged: if (expanded) { refresh(); loadBindings(); if (!ringSave.running) loadRing() }
 
-    // --- значок на панели ---
+    // --- panel icon ---
     compactRepresentation: MouseArea {
         onClicked: root.expanded = !root.expanded
         hoverEnabled: true
@@ -306,7 +306,7 @@ PlasmoidItem {
             source: "input-mouse"
             active: parent.containsMouse
         }
-        Rectangle {  // красная точка, если что-то не так
+        Rectangle {  // red dot if something is wrong
             visible: root.problem
             width: parent.width / 3; height: width; radius: width / 2
             anchors.right: parent.right; anchors.top: parent.top
@@ -321,7 +321,7 @@ PlasmoidItem {
         }
     }
 
-    // --- раскрытое окно ---
+    // --- expanded window ---
     fullRepresentation: PlasmaExtras.Representation {
         Layout.preferredWidth: Kirigami.Units.gridUnit * 24
         Layout.preferredHeight: Kirigami.Units.gridUnit * 34
@@ -332,7 +332,7 @@ PlasmoidItem {
                 anchors.fill: parent
                 Kirigami.Heading { level: 3; text: "MX Master 4"; Layout.fillWidth: true }
                 PC3.Label {
-                    text: !root.online ? "не отвечает"
+                    text: !root.online ? "not responding"
                           : root.mouse.battery + "%" + (root.mouse.charging ? " ⚡" : "")
                     color: !root.online || root.mouse.battery <= 20
                            ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.textColor
@@ -340,7 +340,7 @@ PlasmoidItem {
                 PC3.ToolButton {
                     icon.name: "view-refresh"
                     onClicked: { root.refresh(); root.loadBindings() }
-                    PC3.ToolTip.text: "Обновить"
+                    PC3.ToolTip.text: "Refresh"
                     PC3.ToolTip.visible: hovered
                 }
             }
@@ -353,9 +353,9 @@ PlasmoidItem {
             PC3.TabBar {
                 id: tabs
                 Layout.fillWidth: true
-                PC3.TabButton { text: "Настройки" }
-                PC3.TabButton { text: "Кольцо" }
-                PC3.TabButton { text: "Кнопки" }
+                PC3.TabButton { text: "Settings" }
+                PC3.TabButton { text: "Ring" }
+                PC3.TabButton { text: "Buttons" }
             }
 
             Kirigami.InlineMessage {
@@ -363,8 +363,8 @@ PlasmoidItem {
                 visible: root.problem || root.lastError !== ""
                 type: root.lastError !== "" ? Kirigami.MessageType.Error : Kirigami.MessageType.Warning
                 text: root.lastError !== "" ? root.lastError
-                      : !root.online ? "Мышь не отвечает: она спит или выключена. Пошевели ей."
-                      : "logid не видит мышь, кнопки и жесты не работают. Выключи и включи мышь переключателем снизу."
+                      : !root.online ? "The mouse is not responding: it is asleep or switched off. Move it."
+                      : "logid cannot see the mouse, buttons and gestures will not work. Switch the mouse off and on with the switch on its underside."
             }
 
             StackLayout {
@@ -372,52 +372,52 @@ PlasmoidItem {
                 Layout.fillHeight: true
                 currentIndex: tabs.currentIndex
 
-                // ===== Настройки =====
+                // ===== Settings =====
                 PC3.ScrollView {
                     contentWidth: availableWidth
                     ColumnLayout {
                         width: parent.width
                         spacing: Kirigami.Units.smallSpacing
 
-                        Kirigami.Heading { level: 5; text: "Службы"; opacity: 0.7 }
+                        Kirigami.Heading { level: 5; text: "Services"; opacity: 0.7 }
                         RowLayout {
-                            PC3.Label { text: "logid (кнопки и жесты)"; Layout.fillWidth: true }
+                            PC3.Label { text: "logid (buttons and gestures)"; Layout.fillWidth: true }
                             PC3.Label {
                                 text: root.services.logid === undefined ? "…"
-                                      : !root.services.logid.active ? "не запущен"
-                                      : root.services.logid.sees_mouse ? "видит мышь" : "мышь не найдена"
+                                      : !root.services.logid.active ? "not running"
+                                      : root.services.logid.sees_mouse ? "sees the mouse" : "mouse not found"
                                 color: root.logidLost ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.positiveTextColor
                             }
                         }
                         PC3.Switch {
                             Layout.fillWidth: true
-                            text: "Бинды по приложениям (xremap)"
+                            text: "Per-app bindings (xremap)"
                             checked: root.services.xremap !== undefined && root.services.xremap.active
                             onToggled: root.service("xremap", checked)
                         }
                         PC3.Switch {
                             visible: root.services.meetings !== undefined && root.services.meetings.installed === true
                             Layout.fillWidth: true
-                            text: "Вибро-напоминания о встречах"
+                            text: "Meeting haptic reminders"
                             checked: root.services.meetings !== undefined && root.services.meetings.active
                             onToggled: root.service("meetings", checked)
                         }
 
-                        Kirigami.Heading { level: 5; text: "Мышь"; opacity: 0.7; Layout.topMargin: Kirigami.Units.smallSpacing }
-                        SettingSlider { key: "dpi"; label: "Чувствительность"; suffix: " DPI"; from: 200; to: 8000; step: 50 }
-                        SettingSlider { key: "haptic"; label: "Сила вибрации"; suffix: "%"; from: 0; to: 100; step: 5 }
-                        SettingSlider { key: "threshold"; label: "Порог SmartShift"; from: 1; to: 50; step: 1
-                                        hint: "чем больше, тем быстрее надо крутить для свободного вращения; 50 — всегда щелчки" }
-                        SettingSlider { key: "torque"; label: "Тугость щелчков"; suffix: "%"; from: 1; to: 100; step: 1 }
+                        Kirigami.Heading { level: 5; text: "Mouse"; opacity: 0.7; Layout.topMargin: Kirigami.Units.smallSpacing }
+                        SettingSlider { key: "dpi"; label: "Sensitivity"; suffix: " DPI"; from: 200; to: 8000; step: 50 }
+                        SettingSlider { key: "haptic"; label: "Haptic strength"; suffix: "%"; from: 0; to: 100; step: 5 }
+                        SettingSlider { key: "threshold"; label: "SmartShift threshold"; from: 1; to: 50; step: 1
+                                        hint: "the higher the value, the faster you must spin for free spin; 50 — always ratchet" }
+                        SettingSlider { key: "torque"; label: "Ratchet torque"; suffix: "%"; from: 1; to: 100; step: 1 }
                         PC3.Switch {
                             Layout.fillWidth: true
                             enabled: root.online
-                            text: "Колесо: свободное вращение"
+                            text: "Wheel: free spin"
                             checked: root.mouse.freespin === true
                             onToggled: root.setValue("freespin", checked ? 1 : 0)
                         }
 
-                        Kirigami.Heading { level: 5; text: "Вибрация"; opacity: 0.7; Layout.topMargin: Kirigami.Units.smallSpacing }
+                        Kirigami.Heading { level: 5; text: "Haptics"; opacity: 0.7; Layout.topMargin: Kirigami.Units.smallSpacing }
                         RowLayout {
                             Layout.fillWidth: true
                             PC3.ComboBox {
@@ -426,7 +426,7 @@ PlasmoidItem {
                                 model: root.st.waveforms || ["COMPLETED"]
                             }
                             PC3.Button {
-                                text: "Проверить"
+                                text: "Test"
                                 icon.name: "media-playback-start"
                                 enabled: root.online
                                 onClicked: root.run("buzz " + wave.currentText, r => {})
@@ -435,34 +435,34 @@ PlasmoidItem {
                     }
                 }
 
-                // ===== Кольцо действий =====
+                // ===== Actions ring =====
                 RingPage {}
 
-                // ===== Кнопки: что делает каждая кнопка, по приложениям =====
+                // ===== Buttons: what each button does, per app =====
                 ButtonsPage {}
             }
         }
     }
 
-    // вкладка «Кольцо»: схема из 8 мест, клик по месту — выбрать, что на нём запускать.
-    // Правки сразу пишутся в ~/.config/actions-ring/ring.json (mousectl ring set),
-    // кольцо перечитывает файл при каждом открытии.
+    // "Ring" tab: a scheme of 8 slots, click a slot to pick what it launches.
+    // Edits are written straight to ~/.config/actions-ring/ring.json (mousectl ring set),
+    // the ring re-reads the file every time it opens.
     component RingPage: PC3.ScrollView {
         id: rp
         contentWidth: availableWidth
 
-        readonly property var places: ["вверху", "вверху справа", "справа", "внизу справа",
-                                       "внизу", "внизу слева", "слева", "вверху слева"]
+        readonly property var places: ["top", "top right", "right", "bottom right",
+                                       "bottom", "bottom left", "left", "top left"]
         readonly property var kinds: [
-            { key: "app", label: "Приложение" },
-            { key: "folder", label: "Папка (ещё 8 мест)" },
-            { key: "cmd", label: "Команда" },
-            { key: "kde", label: "Действие KDE" }
+            { key: "app", label: "Application" },
+            { key: "folder", label: "Folder (8 more slots)" },
+            { key: "cmd", label: "Command" },
+            { key: "kde", label: "KDE action" }
         ]
         readonly property var items: { root.ringRev; return root.ringCfg ? root.ringList() : [] }
         readonly property var cur: root.ringSlot >= 0 && items.length ? items[root.ringSlot] : null
         readonly property string kind: cur ? (cur.kind || (cur.items ? "folder" : "cmd")) : ""
-        property string mode: ""            // выбранный в списке тип, пока место ещё не заполнено им
+        property string mode: ""            // the type picked in the list while the slot is not filled with it yet
         readonly property string shown: mode !== "" ? mode : (kind || "app")
         readonly property string folderTitle: {
             root.ringRev
@@ -489,12 +489,12 @@ PlasmoidItem {
                 Layout.fillWidth: true
                 PC3.Switch {
                     Layout.fillWidth: true
-                    text: "Кольцо по haptic-панели"
+                    text: "Ring on the haptic panel"
                     checked: root.services.ring !== undefined && root.services.ring.active
                     onToggled: root.service("ring", checked)
                 }
                 PC3.Button {
-                    text: "Показать"
+                    text: "Show"
                     icon.name: "view-visible"
                     onClicked: { root.expanded = false; showRing.restart() }
                 }
@@ -504,19 +504,19 @@ PlasmoidItem {
                 visible: root.ringPath.length > 0
                 Layout.fillWidth: true
                 PC3.ToolButton {
-                    text: "Назад"
+                    text: "Back"
                     icon.name: "go-previous"
                     onClicked: root.closeFolder()
                 }
                 PC3.Label {
                     Layout.fillWidth: true
-                    text: "Папка: " + rp.folderTitle
+                    text: "Folder: " + rp.folderTitle
                     elide: Text.ElideRight
                     font.bold: true
                 }
             }
 
-            // схема кольца
+            // ring scheme
             Item {
                 id: scheme
                 Layout.fillWidth: true
@@ -537,7 +537,7 @@ PlasmoidItem {
                     wrapMode: Text.Wrap
                     opacity: 0.6
                     text: root.ringSlot >= 0 && rp.cur ? rp.cur.name
-                          : "Выбери место,\nчтобы назначить\nприложение"
+                          : "Pick a slot\nto assign\nan app"
                 }
                 Repeater {
                     model: 8
@@ -556,9 +556,9 @@ PlasmoidItem {
                         opacity: it || checked ? 1 : 0.45
                         onClicked: root.ringSlot = index
                         onDoubleClicked: if (isFolder) root.openFolder(index)
-                        PC3.ToolTip.text: (it ? it.name : "Пусто") + (isFolder ? " — двойной клик, чтобы открыть" : "")
+                        PC3.ToolTip.text: (it ? it.name : "Empty") + (isFolder ? " — double-click to open" : "")
                         PC3.ToolTip.visible: hovered
-                        Rectangle {  // метка папки
+                        Rectangle {  // folder marker
                             visible: parent.isFolder
                             width: 10; height: 10; radius: 5
                             anchors.right: parent.right; anchors.bottom: parent.bottom
@@ -569,7 +569,7 @@ PlasmoidItem {
                 }
             }
 
-            // ===== что на выбранном месте =====
+            // ===== what is on the selected slot =====
             ColumnLayout {
                 visible: root.ringSlot >= 0
                 Layout.fillWidth: true
@@ -580,32 +580,32 @@ PlasmoidItem {
                     Kirigami.Heading {
                         level: 5
                         Layout.fillWidth: true
-                        text: "Место " + (root.ringSlot >= 0 ? rp.places[root.ringSlot] : "")
+                        text: "Slot " + (root.ringSlot >= 0 ? rp.places[root.ringSlot] : "")
                     }
                     PC3.ToolButton {
                         icon.name: "object-rotate-left"
                         onClicked: root.moveSlot(-1)
-                        PC3.ToolTip.text: "Сдвинуть против часовой"
+                        PC3.ToolTip.text: "Move counter-clockwise"
                         PC3.ToolTip.visible: hovered
                     }
                     PC3.ToolButton {
                         icon.name: "object-rotate-right"
                         onClicked: root.moveSlot(1)
-                        PC3.ToolTip.text: "Сдвинуть по часовой"
+                        PC3.ToolTip.text: "Move clockwise"
                         PC3.ToolTip.visible: hovered
                     }
                     PC3.ToolButton {
                         icon.name: "edit-clear"
                         enabled: !!rp.cur
                         onClicked: root.setSlotKind("")
-                        PC3.ToolTip.text: "Очистить место"
+                        PC3.ToolTip.text: "Clear slot"
                         PC3.ToolTip.visible: hovered
                     }
                 }
 
                 RowLayout {
                     Layout.fillWidth: true
-                    PC3.Label { text: "Запускать:" }
+                    PC3.Label { text: "Launch:" }
                     PC3.ComboBox {
                         Layout.fillWidth: true
                         model: rp.kinds
@@ -614,7 +614,7 @@ PlasmoidItem {
                         onActivated: index => {
                             const k = rp.kinds[index].key
                             if (k === rp.kind) { rp.mode = ""; return }
-                            if (k === "app" || k === "kde") rp.mode = k   // место заполнится выбором из списка
+                            if (k === "app" || k === "kde") rp.mode = k   // the slot will be filled by picking from the list
                             else { rp.mode = ""; root.setSlotKind(k) }
                         }
                     }
@@ -623,7 +623,7 @@ PlasmoidItem {
                 RowLayout {
                     visible: !!rp.cur
                     Layout.fillWidth: true
-                    PC3.Label { text: "Название:" }
+                    PC3.Label { text: "Name:" }
                     PC3.TextField {
                         Layout.fillWidth: true
                         text: rp.cur ? (rp.cur.name || "") : ""
@@ -633,10 +633,10 @@ PlasmoidItem {
                 RowLayout {
                     visible: !!rp.cur && rp.shown !== "app"
                     Layout.fillWidth: true
-                    PC3.Label { text: "Иконка:" }
+                    PC3.Label { text: "Icon:" }
                     PC3.TextField {
                         Layout.fillWidth: true
-                        placeholderText: "имя из темы, например folder"
+                        placeholderText: "theme name, e.g. folder"
                         text: rp.cur ? (rp.cur.icon || "") : ""
                         onTextEdited: root.editSlot(it => it.icon = text)
                     }
@@ -647,12 +647,12 @@ PlasmoidItem {
                     }
                 }
 
-                // приложение — список установленных
+                // app — list of installed ones
                 PC3.TextField {
                     id: appFilter
                     visible: rp.shown === "app"
                     Layout.fillWidth: true
-                    placeholderText: "Поиск приложения…"
+                    placeholderText: "Search for an app…"
                     clearButtonShown: true
                 }
                 ListView {
@@ -675,31 +675,31 @@ PlasmoidItem {
                     }
                 }
 
-                // папка
+                // folder
                 PC3.Button {
                     visible: rp.shown === "folder" && !!rp.cur
                     Layout.fillWidth: true
-                    text: "Открыть папку и расставить приложения"
+                    text: "Open the folder and arrange apps"
                     icon.name: "folder-open"
                     onClicked: root.openFolder(root.ringSlot)
                 }
 
-                // команда
+                // command
                 PC3.TextField {
                     visible: rp.shown === "cmd" && !!rp.cur
                     Layout.fillWidth: true
-                    placeholderText: "команда, например spectacle --region"
+                    placeholderText: "command, e.g. spectacle --region"
                     font.family: "monospace"
                     text: rp.cur ? (rp.cur.cmd || "") : ""
                     onTextEdited: root.editSlot(it => it.cmd = text)
                 }
 
-                // действие KDE — глобальные действия kglobalaccel
+                // KDE action — kglobalaccel global actions
                 PC3.TextField {
                     id: kdeFilter
                     visible: rp.shown === "kde"
                     Layout.fillWidth: true
-                    placeholderText: "Поиск действия…"
+                    placeholderText: "Search for an action…"
                     clearButtonShown: true
                 }
                 ListView {
@@ -731,13 +731,13 @@ PlasmoidItem {
                 }
             }
 
-            // ===== вибрация =====
-            Kirigami.Heading { level: 5; text: "Вибрация кольца"; opacity: 0.7; Layout.topMargin: Kirigami.Units.smallSpacing }
+            // ===== haptics =====
+            Kirigami.Heading { level: 5; text: "Ring haptics"; opacity: 0.7; Layout.topMargin: Kirigami.Units.smallSpacing }
             Repeater {
                 model: [
-                    { key: "hover_haptic", label: "Наведение на место", def: "SUBTLE_COLLISION" },
-                    { key: "activate_haptic", label: "Запуск", def: "DAMP_STATE_CHANGE" },
-                    { key: "folder_haptic", label: "Вход в папку", def: "SHARP_STATE_CHANGE" }
+                    { key: "hover_haptic", label: "Hovering a slot", def: "SUBTLE_COLLISION" },
+                    { key: "activate_haptic", label: "Launch", def: "DAMP_STATE_CHANGE" },
+                    { key: "folder_haptic", label: "Entering a folder", def: "SHARP_STATE_CHANGE" }
                 ]
                 delegate: RowLayout {
                     required property var modelData
@@ -767,14 +767,14 @@ PlasmoidItem {
                 Layout.topMargin: Kirigami.Units.largeSpacing
                 wrapMode: Text.Wrap
                 opacity: 0.6
-                text: "Сохраняется сразу, кольцо подхватит при следующем открытии. Папка — двойной клик по её месту на схеме."
+                text: "Saved immediately, the ring picks it up the next time it opens. Folder — double-click its slot in the scheme."
             }
         }
     }
 
-    // вкладка «Кнопки»: сверху профили (иконки приложений, первым — «Все приложения»), ниже карточки
-    // кнопок мыши; у кнопок с жестами — крест «нажатие + 4 направления». Клик по плитке открывает
-    // каталог действий прямо в карточке; выбор сохраняется сам (mousectl bindings set, xremap перезапускается).
+    // "Buttons" tab: profiles on top (app icons, "All applications" first), button cards below;
+    // buttons with gestures get a cross "click + 4 directions". Clicking a tile opens the
+    // action catalogue right in the card; the choice saves itself (mousectl bindings set, xremap restarts).
     component ButtonsPage: PC3.ScrollView {
         id: bp
         contentWidth: availableWidth
@@ -790,12 +790,12 @@ PlasmoidItem {
             width: parent.width
             spacing: Kirigami.Units.smallSpacing
 
-            // --- профили ---
+            // --- profiles ---
             Flow {
                 Layout.fillWidth: true
                 spacing: Kirigami.Units.smallSpacing
                 Repeater {
-                    // индексы профилей: сначала «Все приложения» (он последний в списке), затем приложения
+                    // profile indices: "All applications" first (it is last in the list), then the apps
                     model: {
                         root.bindRev
                         const n = root.bindProfiles.length
@@ -823,25 +823,25 @@ PlasmoidItem {
                     checkable: true
                     checked: bp.adding
                     onClicked: bp.adding = !bp.adding
-                    PC3.ToolTip.text: "Свои кнопки для приложения"
+                    PC3.ToolTip.text: "Per-app buttons"
                     PC3.ToolTip.visible: hovered
                 }
             }
 
-            // --- добавить приложение ---
+            // --- add an app ---
             ColumnLayout {
                 visible: bp.adding
                 Layout.fillWidth: true
-                Kirigami.Heading { level: 5; text: "Для какого приложения настроить кнопки?" }
+                Kirigami.Heading { level: 5; text: "Which app should these buttons apply to?" }
                 PickList {
                     source: root.ringData.apps || []
-                    placeholder: "Поиск приложения…"
+                    placeholder: "Search for an app…"
                     iconRole: "icon"
                     onPicked: item => { root.addProfile(item); bp.adding = false }
                 }
             }
 
-            // --- заголовок профиля ---
+            // --- profile header ---
             RowLayout {
                 visible: !bp.adding && !!bp.profile
                 Layout.fillWidth: true
@@ -859,20 +859,20 @@ PlasmoidItem {
                         wrapMode: Text.Wrap
                         font: Kirigami.Theme.smallFont
                         opacity: 0.6
-                        text: bp.isDefault ? "Так кнопки работают везде, где нет своих настроек."
-                                           : "Серым — как во «Всех приложениях». Клик по плитке — поменять."
+                        text: bp.isDefault ? "This is how the buttons work everywhere without their own settings."
+                                           : "Grey means inherited from All applications. Click a tile to change it."
                     }
                 }
                 PC3.ToolButton {
                     visible: !bp.isDefault
                     icon.name: "edit-delete"
                     onClicked: root.removeProfile()
-                    PC3.ToolTip.text: "Убрать свои настройки для этого приложения"
+                    PC3.ToolTip.text: "Remove this app's custom settings"
                     PC3.ToolTip.visible: hovered
                 }
             }
 
-            // --- карточки кнопок ---
+            // --- button cards ---
             Repeater {
                 model: bp.adding ? [] : (root.bindData.buttons || [])
                 delegate: Rectangle {
@@ -904,7 +904,7 @@ PlasmoidItem {
                             }
                         }
 
-                        // одна плитка или крест «нажатие + 4 направления»
+                        // one tile or a "click + 4 directions" cross
                         GridLayout {
                             Layout.fillWidth: true
                             columns: card.modelData.slots.length > 1 ? 3 : 1
@@ -930,7 +930,7 @@ PlasmoidItem {
                 }
             }
 
-            // --- низ ---
+            // --- footer ---
             RowLayout {
                 visible: !bp.adding
                 Layout.fillWidth: true
@@ -942,21 +942,21 @@ PlasmoidItem {
                     elide: Text.ElideRight
                 }
                 PC3.Button {
-                    text: bp.confirmReset ? "Точно? Нажми ещё раз" : "Стандартная раскладка"
+                    text: bp.confirmReset ? "Sure? Click again" : "Default layout"
                     icon.name: "edit-reset"
                     onClicked: {
                         if (!bp.confirmReset) { bp.confirmReset = true; resetArm.restart(); return }
                         bp.confirmReset = false
                         root.resetDefaults()
                     }
-                    PC3.ToolTip.text: "Вернуть «Все приложения» к стандартным; свои настройки приложений останутся"
+                    PC3.ToolTip.text: "Reset All applications to the defaults; per-app settings are kept"
                     PC3.ToolTip.visible: hovered
                 }
             }
         }
     }
 
-    // плитка одной клавиши-слота: направление и что оно делает; пустая ячейка креста — невидима
+    // tile of one key-slot: the direction and what it does; an empty cross cell is invisible
     component SlotTile: Rectangle {
         id: tile
         property var slot: null
@@ -1012,7 +1012,7 @@ PlasmoidItem {
         }
     }
 
-    // каталог действий для выбранной клавиши: готовые действия по разделам + приложение / сочетание / действие KDE
+    // action catalogue for the selected key: ready-made actions by section + app / key combo / KDE action
     component ActionPicker: ColumnLayout {
         id: ap
         property string slotKey: ""
@@ -1023,9 +1023,9 @@ PlasmoidItem {
         readonly property var entries: {
             const q = search.text.toLowerCase()
             const list = (root.bindData.catalog || []).concat([
-                { id: "__app", cat: "Другое", name: "Запустить приложение…", icon: "system-run" },
-                { id: "__keys", cat: "Другое", name: "Нажать сочетание клавиш…", icon: "input-keyboard" },
-                { id: "__kde", cat: "Другое", name: "Действие KDE…", icon: "preferences-desktop-keyboard-shortcut" }
+                { id: "__app", cat: "Other", name: "Launch an app…", icon: "system-run" },
+                { id: "__keys", cat: "Other", name: "Press a key combo…", icon: "input-keyboard" },
+                { id: "__kde", cat: "Other", name: "KDE action…", icon: "preferences-desktop-keyboard-shortcut" }
             ]).filter(c => !q || c.name.toLowerCase().includes(q) || c.cat.toLowerCase().includes(q))
             const out = []
             let cat = ""
@@ -1043,49 +1043,49 @@ PlasmoidItem {
             Layout.fillWidth: true
             PC3.Button {
                 visible: !ap.isDefault
-                text: "Как во «Всех приложениях»"
+                text: "As in All applications"
                 onClicked: root.setSlot(ap.slotKey, { kind: "default" })
             }
             PC3.Button {
                 visible: !ap.isWheel
-                text: "Ничего"
+                text: "Nothing"
                 onClicked: root.setSlot(ap.slotKey, { kind: "nothing" })
             }
             Item { Layout.fillWidth: true }
             PC3.ToolButton {
                 icon.name: "dialog-close"
                 onClicked: root.bindKey = ""
-                PC3.ToolTip.text: "Закрыть"
+                PC3.ToolTip.text: "Close"
                 PC3.ToolTip.visible: hovered
             }
         }
 
-        // боковое колесо: только прокрутка или вкладки
+        // thumb wheel: only scrolling or tabs
         ColumnLayout {
             visible: ap.isWheel
             Layout.fillWidth: true
             PC3.ItemDelegate {
                 Layout.fillWidth: true
-                text: "Обычная прокрутка вбок"
+                text: "Normal side scroll"
                 icon.name: "transform-move-horizontal"
                 highlighted: !!ap.cur && ap.cur.kind === "scroll"
                 onClicked: root.setSlot(ap.slotKey, { kind: ap.isDefault ? "scroll" : "default" })
             }
             PC3.ItemDelegate {
                 Layout.fillWidth: true
-                text: "Переключать вкладки (одна вкладка на 4 щелчка)"
+                text: "Switch tabs (one tab per 4 clicks)"
                 icon.name: "tab-duplicate"
                 highlighted: !!ap.cur && ap.cur.kind === "tabs"
                 onClicked: root.setSlot(ap.slotKey, { kind: "tabs", prev: "C-Shift-tab", next: "C-tab" })
             }
         }
 
-        // каталог
+        // catalogue
         PC3.TextField {
             id: search
             visible: !ap.isWheel && ap.mode === ""
             Layout.fillWidth: true
-            placeholderText: "Поиск действия…"
+            placeholderText: "Search for an action…"
             clearButtonShown: true
         }
         ListView {
@@ -1113,14 +1113,14 @@ PlasmoidItem {
 
         PC3.ToolButton {
             visible: ap.mode !== ""
-            text: "К списку действий"
+            text: "Back to the action list"
             icon.name: "go-previous"
             onClicked: ap.mode = ""
         }
         PickList {
             visible: ap.mode === "app"
             source: root.ringData.apps || []
-            placeholder: "Поиск приложения…"
+            placeholder: "Search for an app…"
             iconRole: "icon"
             currentKey: ap.cur && ap.cur.kind === "app" ? ap.cur.app : ""
             onPicked: item => root.setSlot(ap.slotKey, { kind: "app", app: item.id })
@@ -1137,13 +1137,13 @@ PlasmoidItem {
                 wrapMode: Text.Wrap
                 font: Kirigami.Theme.smallFont
                 opacity: 0.6
-                text: "Нажми «Записать» и затем сочетание. Сочетания с Meta перехватывает KDE — их впиши, например Super-w, и нажми Enter."
+                text: "Click Record, then press the combo. Combos with Meta are grabbed by KDE — type them instead, e.g. Super-w, and press Enter."
             }
         }
         PickList {
             visible: ap.mode === "kde"
             source: root.ringData.shortcuts || []
-            placeholder: "Поиск действия KDE…"
+            placeholder: "Search for a KDE action…"
             textRole: "friendly"
             keyRole: "name"
             currentKey: ap.cur && ap.cur.kind === "kde" ? ap.cur.name : ""
@@ -1151,11 +1151,11 @@ PlasmoidItem {
         }
     }
 
-    // список с поиском: приложения, действия KDE
+    // searchable list: apps, KDE actions
     component PickList: ColumnLayout {
         id: pl
         property var source: []
-        property string placeholder: "Поиск…"
+        property string placeholder: "Search…"
         property string textRole: "name"
         property string iconRole: ""
         property string keyRole: "id"
@@ -1188,8 +1188,8 @@ PlasmoidItem {
         }
     }
 
-    // сочетание клавиш в синтаксисе xremap (C-Shift-t, Super-left): вписать руками или «Записать».
-    // Глобальные сочетания KDE (Meta+W и т. п.) KWin перехватывает раньше — их вписывать руками.
+    // key combo in xremap syntax (C-Shift-t, Super-left): type it by hand or click Record.
+    // Global KDE combos (Meta+W etc.) are grabbed by KWin first — type them by hand.
     component KeyCapture: RowLayout {
         id: kc
         property string value: ""
@@ -1206,7 +1206,7 @@ PlasmoidItem {
         PC3.Button {
             id: rec
             checkable: true
-            text: checked ? "Нажми…" : "Записать"
+            text: checked ? "Press…" : "Record"
             icon.name: "media-record"
             onCheckedChanged: if (checked) catcher.forceActiveFocus()
         }
@@ -1217,7 +1217,7 @@ PlasmoidItem {
             Keys.onPressed: event => {
                 event.accepted = true
                 const name = root.evdevNames[event.nativeScanCode - 8]
-                if (!name) return                        // нажат только модификатор — ждём клавишу
+                if (!name) return                        // only a modifier is pressed — waiting for a key
                 const m = event.modifiers
                 if (name === "esc" && !m) { rec.checked = false; return }
                 const v = (m & Qt.ControlModifier ? "C-" : "") + (m & Qt.ShiftModifier ? "Shift-" : "")
@@ -1228,7 +1228,7 @@ PlasmoidItem {
         }
     }
 
-    // ползунок настройки: значение с мыши, запись по отпусканию
+    // settings slider: the value comes from the mouse, written on release
     component SettingSlider: ColumnLayout {
         id: ss
         required property string key

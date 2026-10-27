@@ -2,7 +2,7 @@
     "KPlugin": {
         "Id": "org.mxmaster4.widget",
         "Name": "MX Master 4",
-        "Description": "MX Master 4: заряд, DPI, вибрация, SmartShift, кнопки и жесты по приложениям, кольцо действий",
+        "Description": "MX Master 4: battery, DPI, haptics, SmartShift, per-app buttons and gestures, actions ring",
         "Icon": "input-mouse",
         "Category": "System Information",
         "Authors": [{ "Name": "Дмитрий Сарафанников" }],

@@ -1,8 +1,8 @@
-# mx-master-4-kde-cachy: доступ без root для пользователя за компьютером (uaccess)
-# xremap читает виртуальное устройство logiops и саму мышь (боковое колесо)
+# mx-master-4-kde-cachy: rootless access for the user at the computer (uaccess)
+# xremap reads the logiops virtual device and the mouse itself (thumb wheel)
 SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="LogiOps Virtual Input", TAG+="uaccess"
 SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="Logitech USB Receiver Mouse", TAG+="uaccess"
-# mousectl / mouse-buzz / кольцо говорят с приёмником Logitech по HID++ (заряд, DPI, вибрация)
+# mousectl / mouse-buzz / the ring talk to the Logitech receiver over HID++ (battery, DPI, haptics)
 SUBSYSTEM=="hidraw", ATTRS{idVendor}=="046d", TAG+="uaccess"
-# xremap пишет нажатия через uinput
+# xremap emits key presses through uinput
 KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"

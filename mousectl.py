@@ -1,27 +1,27 @@
 #!/usr/bin/env python3
-"""Бэкенд виджета KDE «MX Master 4»: состояние мыши и служб в JSON, команды настройки.
+"""Backend for the KDE "MX Master 4" widget: mouse and service state as JSON, settings commands.
 
-    mousectl status [--enforce]    всё состояние одним JSON (виджет опрашивает раз в 30 с)
-    mousectl set dpi|haptic|threshold|torque|freespin ЗНАЧЕНИЕ
-    mousectl buzz СИГНАЛ
+    mousectl status [--enforce]    the whole state as one JSON (the widget polls every 30 s)
+    mousectl set dpi|haptic|threshold|torque|freespin VALUE
+    mousectl buzz WAVEFORM
     mousectl service xremap|ring|meetings start|stop|restart
-    mousectl bindings [get]        кнопки по профилям приложений + каталог действий (модель — buttons.py)
-    mousectl bindings set JSON     записать профили (JSON в percent-кодировке), проверить и перезапустить xremap
-    mousectl bindings reset        стандартная раскладка «Всех приложений» (профили приложений остаются)
-    mousectl wheel toggle          колесо: щелчки ↔ свободное вращение
-    mousectl ring get              кольцо действий: конфиг, приложения, действия KDE, недавние окна
-    mousectl ring set JSON         записать конфиг кольца (JSON в percent-кодировке, как encodeURIComponent)
-    mousectl ring show             показать кольцо
+    mousectl bindings [get]        buttons per app profile + action catalogue (model — buttons.py)
+    mousectl bindings set JSON     write the profiles (percent-encoded JSON), validate and restart xremap
+    mousectl bindings reset        default "All applications" layout (app profiles are kept)
+    mousectl wheel toggle          wheel: ratchet ↔ free spin
+    mousectl ring get              actions ring: config, apps, KDE actions, recent windows
+    mousectl ring set JSON         write the ring config (percent-encoded JSON, like encodeURIComponent)
+    mousectl ring show             show the ring
 
-Настройки мыши (DPI, сила вибрации, порог и тугость SmartShift) пишутся по HID++
-напрямую и запоминаются в ~/.config/mousectl/settings.json. `status --enforce`
-возвращает их на мышь, если они сбились (после выключения мыши и т. п.). Режим колеса
-(щелчки / свободное) не запоминается: его переключает кнопка за колесом, и виджет не должен
-её перебивать. logid эти параметры не задаёт (их нет в config/logid.cfg), иначе он перетирал бы
-их при каждом пробуждении мыши.
+Mouse settings (DPI, haptic strength, SmartShift threshold and torque) are written over HID++
+directly and remembered in ~/.config/mousectl/settings.json. `status --enforce`
+writes them back to the mouse if they drifted (after switching the mouse off, etc.). The wheel mode
+(ratchet / free) is not remembered: the button behind the wheel toggles it, and the widget must not
+override it. logid does not set these parameters (they are absent from config/logid.cfg), otherwise
+it would overwrite them every time the mouse wakes up.
 
-Задел на расширение: новые команды — новые функции cmd_* и строка в COMMANDS;
-виджет вызывает `mousectl <команда>` и разбирает JSON из stdout.
+Room for growth: new commands are new cmd_* functions and a line in COMMANDS;
+the widget calls `mousectl <command>` and parses JSON from stdout.
 """
 import json
 import os
@@ -37,14 +37,14 @@ XREMAP_CONFIG = os.path.expanduser("~/.config/xremap/config.yml")
 WAVEFORMS = ["COMPLETED", "HAPPY_ALERT", "ANGRY_ALERT", "KNOCK", "RINGING", "JINGLE",
              "FIREWORK", "WAVE", "SQUARE", "MAD", "SHARP_STATE_CHANGE", "DAMP_STATE_CHANGE",
              "SHARP_COLLISION", "DAMP_COLLISION", "SUBTLE_COLLISION", "WHISPER_COLLISION"]
-# meetings — необязательный свой таймер напоминаний (в комплект не входит): переключатель
-# в виджете показывается, только если такой юнит установлен
+# meetings — an optional custom reminder timer (not bundled): the toggle
+# is shown in the widget only if such a unit is installed
 SERVICES = {"xremap": "xremap.service", "meetings": "meeting-buzz.timer", "ring": "actions-ring.service"}
 RING_CONFIG = os.path.expanduser("~/.config/actions-ring/ring.json")
 RING_DEFAULT = os.path.join(HERE, "config", "actions-ring.json")
 RING_WAVEFORMS = ["SUBTLE_COLLISION", "WHISPER_COLLISION", "SHARP_COLLISION", "DAMP_COLLISION",
                   "SHARP_STATE_CHANGE", "DAMP_STATE_CHANGE", "HAPPY_ALERT", "COMPLETED", "KNOCK"]
-# компоненты kglobalaccel, чьи действия предлагаются в кольцо
+# kglobalaccel components whose actions are offered for the ring
 KDE_COMPONENTS = ["kwin", "plasmashell", "ksmserver", "mediacontrol", "kmix",
                   "org_kde_powerdevil", "KDE_Keyboard_Layout_Switcher"]
 LIMITS = {"dpi": (200, 8000), "haptic": (0, 100), "threshold": (1, 50), "torque": (1, 100)}
@@ -54,20 +54,20 @@ def out(obj):
     print(json.dumps(obj, ensure_ascii=False))
 
 
-# ---------- мышь ----------
+# ---------- mouse ----------
 
 def read_mouse(m):
     st = {"online": True}
     if (r := m.call(hidpp.F_BATTERY, 1)):
         st["battery"] = r[0]
-        st["charging"] = r[2] in (1, 2)          # 1 — заряжается, 2 — почти полная на зарядке
+        st["charging"] = r[2] in (1, 2)          # 1 — charging, 2 — nearly full on the charger
     if (r := m.call(hidpp.F_DPI, 2, b"\0")):
         st["dpi"] = int.from_bytes(r[1:3], "big") or int.from_bytes(r[3:5], "big")
     if (r := m.call(hidpp.F_HAPTIC, 1)):
         st["haptic"] = r[1] if r[0] & 1 else 0
     if (r := m.call(hidpp.F_SMARTSHIFT, 1)):
         st["freespin"] = r[0] == 1
-        st["threshold"] = min(r[1], 50)          # 255 = «всегда щелчки», показываем как 50
+        st["threshold"] = min(r[1], 50)          # 255 = "always ratchet", shown as 50
         st["torque"] = r[2]
     return st
 
@@ -80,7 +80,7 @@ def write_mouse(m, key, value, current):
         payload = bytes([0, 0x32]) if value == 0 else bytes([1, value])
         return m.call(hidpp.F_HAPTIC, 2, payload) is not None
     if key in ("threshold", "torque", "freespin"):
-        # MX Master 4 применяет порог/тугость, только если записан и режим — пишем всё целиком
+        # the MX Master 4 applies threshold/torque only if the mode is written too — write everything
         mode = 2 if not current.get("freespin") else 1
         threshold = current.get("threshold", 20)
         torque = current.get("torque", 20)
@@ -109,7 +109,7 @@ def save_setting(key, value):
     json.dump(s, open(SETTINGS, "w"), ensure_ascii=False, indent=2)
 
 
-# ---------- службы ----------
+# ---------- services ----------
 
 def unit_active(unit, user=True):
     cmd = ["systemctl"] + (["--user"] if user else []) + ["is-active", unit]
@@ -122,7 +122,7 @@ def unit_installed(unit):
 
 
 def logid_sees_mouse():
-    """По журналу: после последнего «Detected receiver» была строка «Device found»."""
+    """From the log: after the last "Detected receiver" there was a "Device found" line."""
     r = subprocess.run(["journalctl", "-u", "logid", "-n", "200", "-o", "cat", "--no-pager"],
                        capture_output=True, text=True)
     found = None
@@ -134,7 +134,7 @@ def logid_sees_mouse():
     return found
 
 
-# ---------- команды ----------
+# ---------- commands ----------
 
 def cmd_status(args):
     enforce = "--enforce" in args
@@ -177,9 +177,9 @@ def cmd_set(args):
             out({"ok": ok, "key": key, "value": value, "mouse": read_mouse(m)})
             return 0 if ok else 1
     except hidpp.NoMouse:
-        if key != "freespin":       # применится через status --enforce, когда мышь проснётся
+        if key != "freespin":       # will be applied by status --enforce when the mouse wakes up
             save_setting(key, value)
-        out({"ok": False, "error": "мышь не отвечает", "key": key, "value": value})
+        out({"ok": False, "error": "the mouse is not responding", "key": key, "value": value})
         return 1
 
 
@@ -192,7 +192,7 @@ def cmd_buzz(args):
 def cmd_service(args):
     name, action = args[0], args[1]
     if name not in SERVICES or action not in ("start", "stop", "restart"):
-        out({"ok": False, "error": "неизвестная служба или действие"})
+        out({"ok": False, "error": "unknown service or action"})
         return 2
     r = subprocess.run(["systemctl", "--user", action, SERVICES[name]], capture_output=True, text=True)
     out({"ok": r.returncode == 0, "error": r.stderr.strip(), "active": unit_active(SERVICES[name])})
@@ -206,7 +206,7 @@ def cmd_bindings(args):
     def current():
         try:
             return yaml.safe_load(open(XREMAP_CONFIG)) or {}
-        except FileNotFoundError:          # первый запуск: стандартная раскладка
+        except FileNotFoundError:          # first run: default layout
             return {}
 
     if sub == "get":
@@ -221,7 +221,7 @@ def cmd_bindings(args):
             from urllib.parse import unquote
             profiles = json.loads(unquote(args[1]))
             keymap = buttons.build_keymap(profiles, desktop_apps())
-        else:                                   # стандартная раскладка, профили приложений сохраняются
+        else:                                   # default layout, app profiles are preserved
             cfg = current()
             keymap = [km for km in cfg.get("keymap", []) if (km.get("application") or {}).get("only")]
             keymap += buttons.build_keymap(buttons.load_profiles({}, []), [])
@@ -233,7 +233,7 @@ def cmd_bindings(args):
         r = subprocess.run(["xremap", "--validate-config", tmp], capture_output=True, text=True)
         if r.returncode != 0:
             os.unlink(tmp)
-            out({"ok": False, "error": "xremap не принял конфиг: " + (r.stderr or r.stdout).strip()[-300:]})
+            out({"ok": False, "error": "xremap rejected the config: " + (r.stderr or r.stdout).strip()[-300:]})
             return 1
         if os.path.exists(XREMAP_CONFIG):
             shutil.copy2(XREMAP_CONFIG, XREMAP_CONFIG + ".bak")
@@ -245,7 +245,7 @@ def cmd_bindings(args):
 
 
 def cmd_wheel(args):
-    """wheel toggle — колесо: щелчки ↔ свободное вращение (для кнопки за колесом)."""
+    """wheel toggle — wheel: ratchet ↔ free spin (for the button behind the wheel)."""
     if args[0] != "toggle":
         raise ValueError(args[0])
     try:
@@ -255,14 +255,14 @@ def cmd_wheel(args):
             out({"ok": ok, "freespin": not cur.get("freespin")})
             return 0 if ok else 1
     except hidpp.NoMouse:
-        out({"ok": False, "error": "мышь не отвечает"})
+        out({"ok": False, "error": "the mouse is not responding"})
         return 1
 
 
-# ---------- кольцо действий ----------
+# ---------- actions ring ----------
 
 def desktop_apps():
-    """Видимые приложения из .desktop: id, название (на языке системы, если есть), иконка."""
+    """Visible apps from .desktop: id, name (in the system language if present), icon."""
     lang = (os.environ.get("LANG") or "en")[:2]
     dirs = ["/usr/share/applications", os.path.expanduser("~/.local/share/applications"),
             "/var/lib/flatpak/exports/share/applications"]
@@ -299,7 +299,7 @@ def kde_shortcuts():
     try:
         import dbus
         bus = dbus.SessionBus()
-    except Exception:  # noqa: BLE001 — нет dbus-python или сессии: просто без действий KDE
+    except Exception:  # noqa: BLE001 — no dbus-python or no session: just no KDE actions
         return []
     result = []
     for comp in KDE_COMPONENTS:
@@ -341,7 +341,7 @@ def cmd_ring(args):
         from urllib.parse import unquote
         cfg = json.loads(unquote(args[1]))
         if not isinstance(cfg, dict) or not isinstance(cfg.get("items", []), list):
-            raise ValueError("ожидался объект с items")
+            raise ValueError("expected an object with items")
         os.makedirs(os.path.dirname(RING_CONFIG), exist_ok=True)
         tmp = RING_CONFIG + ".tmp"
         json.dump(cfg, open(tmp, "w"), ensure_ascii=False, indent=2)
@@ -350,7 +350,7 @@ def cmd_ring(args):
         return 0
     if sub == "show":
         r = subprocess.run([os.path.join(HERE, "actions-ring", "actions_ring.py"), "show"])
-        out({"ok": r.returncode == 0, "error": "" if r.returncode == 0 else "служба кольца не запущена"})
+        out({"ok": r.returncode == 0, "error": "" if r.returncode == 0 else "the ring service is not running"})
         return r.returncode
     raise ValueError(sub)
 
@@ -366,7 +366,7 @@ def main():
     try:
         return COMMANDS[sys.argv[1]](sys.argv[2:])
     except (IndexError, KeyError, ValueError) as e:
-        out({"ok": False, "error": f"неверные аргументы: {e}"})
+        out({"ok": False, "error": f"invalid arguments: {e}"})
         return 2
 
 

@@ -1,5 +1,5 @@
 [Unit]
-Description=Кольцо действий MX Master 4 (haptic-панель)
+Description=MX Master 4 Actions Ring (haptic panel)
 After=graphical-session.target
 PartOf=graphical-session.target
 

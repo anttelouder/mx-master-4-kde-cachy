@@ -1,16 +1,16 @@
-"""Бинды кнопок MX Master 4 для вкладки «Кнопки» виджета: модель «профиль приложения × кнопка».
+"""MX Master 4 button bindings for the widget's "Buttons" tab: the "app profile × button" model.
 
-logid (/etc/logid.cfg) раз и навсегда шлёт с каждой кнопки и каждого жеста свою «пустую»
-клавишу (таблица BUTTONS, та же, что в комментарии logid.cfg). Смысл им задаёт xremap
-(~/.config/xremap/config.yml), который пишет этот модуль:
+logid (/etc/logid.cfg) permanently sends a dedicated "blank" key from every button and gesture
+(the BUTTONS table, the same one as in the logid.cfg comment). Their meaning is assigned by xremap
+(~/.config/xremap/config.yml), which this module writes:
 
-- профили приложений — keymap с application.only, по порядку; кнопка, не заданная в профиле,
-  берётся из «Всех приложений» (xremap идёт к следующему keymap);
-- «Все приложения» — последний keymap без application; в нём заданы все кнопки, «ничего» = [].
+- app profiles — keymaps with application.only, in order; a button not set in a profile
+  falls back to "All applications" (xremap moves on to the next keymap);
+- "All applications" — the last keymap without application; it sets every button, "nothing" = [].
 
-Действие кнопки для виджета: preset (из CATALOG), keys (сочетание в синтаксисе xremap), app,
-kde (глобальное действие kglobalaccel), nothing, default (только в профиле приложения), raw
-(что-то, что модель не разбирает, — сохраняется как есть). Боковое колесо: scroll / tabs / raw.
+A button action for the widget: preset (from CATALOG), keys (a combo in xremap syntax), app,
+kde (a kglobalaccel global action), nothing, default (only in an app profile), raw
+(something the model does not parse — stored as is). Thumb wheel: scroll / tabs / raw.
 """
 import json
 import os
@@ -18,30 +18,30 @@ import re
 
 HOME_BIN = os.path.expanduser("~/.local/bin")
 KGA = ["qdbus6", "org.kde.kglobalaccel"]
-DEFAULT_NAME = "Все приложения"
+DEFAULT_NAME = "All applications"
 
-# кнопка → направления → «пустая» клавиша из logid.cfg
+# button → directions → "blank" key from logid.cfg
 BUTTONS = [
-    {"id": "gesture", "name": "Кнопка жестов", "hint": "под большим пальцем: нажать или зажать и повести",
-     "slots": [("click", "Нажатие", "F13"), ("up", "Вверх", "F14"), ("down", "Вниз", "F15"),
-               ("left", "Влево", "F16"), ("right", "Вправо", "F17")]},
-    {"id": "back", "name": "Назад", "hint": "нажать или зажать и повести; вверх/вниз повторяются по ходу движения",
-     "slots": [("click", "Нажатие", "F23"), ("up", "Вверх (повтор)", "F24"), ("down", "Вниз (повтор)", "KEY_FN_F1"),
-               ("left", "Влево", "KEY_FN_F2"), ("right", "Вправо", "KEY_FN_F3")]},
-    {"id": "forward", "name": "Вперёд", "hint": "нажать или зажать и повести",
-     "slots": [("click", "Нажатие", "F19"), ("up", "Вверх", "F18"), ("down", "Вниз", "F20"),
-               ("left", "Влево", "F21"), ("right", "Вправо", "F22")]},
-    {"id": "haptic", "name": "Haptic-панель", "hint": "нажатие на панель под большим пальцем",
-     "slots": [("click", "Нажатие", "KEY_FN_F4")]},
-    {"id": "wheelbtn", "name": "Кнопка за колесом", "hint": "",
-     "slots": [("click", "Нажатие", "KEY_FN_F5")]},
-    {"id": "sidewheel", "name": "Боковое колесо", "hint": "под большим пальцем",
-     "slots": [("wheel", "Прокрутка", "WHEEL")]},
+    {"id": "gesture", "name": "Gesture button", "hint": "under the thumb: click, or hold and move",
+     "slots": [("click", "Click", "F13"), ("up", "Up", "F14"), ("down", "Down", "F15"),
+               ("left", "Left", "F16"), ("right", "Right", "F17")]},
+    {"id": "back", "name": "Back", "hint": "click, or hold and move; up/down repeat while you keep moving",
+     "slots": [("click", "Click", "F23"), ("up", "Up (repeat)", "F24"), ("down", "Down (repeat)", "KEY_FN_F1"),
+               ("left", "Left", "KEY_FN_F2"), ("right", "Right", "KEY_FN_F3")]},
+    {"id": "forward", "name": "Forward", "hint": "click, or hold and move",
+     "slots": [("click", "Click", "F19"), ("up", "Up", "F18"), ("down", "Down", "F20"),
+               ("left", "Left", "F21"), ("right", "Right", "F22")]},
+    {"id": "haptic", "name": "Haptic panel", "hint": "press the panel under your thumb",
+     "slots": [("click", "Click", "KEY_FN_F4")]},
+    {"id": "wheelbtn", "name": "Button behind the wheel", "hint": "",
+     "slots": [("click", "Click", "KEY_FN_F5")]},
+    {"id": "sidewheel", "name": "Thumb wheel", "hint": "under the thumb",
+     "slots": [("wheel", "Scroll", "WHEEL")]},
 ]
 KEYS = [s[2] for b in BUTTONS for s in b["slots"]]
 SLOT_LABEL = {s[2]: f"{b['name']}: {s[1].lower()}" if len(b["slots"]) > 1 else b["name"]
               for b in BUTTONS for s in b["slots"]}
-OLD_KEYS = {"Super-Shift-s": "KEY_FN_F4"}   # в ранних версиях haptic-панель слала Meta+Shift+S
+OLD_KEYS = {"Super-Shift-s": "KEY_FN_F4"}   # in early versions the haptic panel sent Meta+Shift+S
 
 
 def kde(component, name):
@@ -52,49 +52,49 @@ def launch(*argv):
     return {"launch": list(argv)}
 
 
-# Каталог готовых действий: (id, раздел, название, иконка, значение xremap[, псевдонимы])
+# Catalogue of ready-made actions: (id, section, name, icon, xremap value[, aliases])
 CATALOG = [
-    ("back", "Навигация", "Назад", "go-previous", "BTN_SIDE"),
-    ("forward", "Навигация", "Вперёд", "go-next", "BTN_EXTRA"),
-    ("tab_new", "Вкладки", "Новая вкладка", "tab-new", "C-t"),
-    ("tab_close", "Вкладки", "Закрыть вкладку", "tab-close", "C-w"),
-    ("tab_reopen", "Вкладки", "Вернуть закрытую вкладку", "edit-undo", "C-Shift-t"),
-    ("tab_next", "Вкладки", "Следующая вкладка", "go-next-view", "C-tab", ["C-pagedown"]),
-    ("tab_prev", "Вкладки", "Предыдущая вкладка", "go-previous-view", "C-Shift-tab", ["C-pageup"]),
-    ("overview", "Окна", "Обзор окон", "view-grid", kde("kwin", "Overview"), ["Super-w"]),
-    ("maximize", "Окна", "Распахнуть окно", "window-maximize", kde("kwin", "Window Maximize"), ["Super-pageup"]),
-    ("minimize", "Окна", "Свернуть окно", "window-minimize", kde("kwin", "Window Minimize"), ["Super-pagedown"]),
-    ("tile_left", "Окна", "Окно на левую половину", "view-split-left-right", kde("kwin", "Window Quick Tile Left"), ["Super-left"]),
-    ("tile_right", "Окна", "Окно на правую половину", "view-split-left-right", kde("kwin", "Window Quick Tile Right"), ["Super-right"]),
-    ("close_window", "Окна", "Закрыть окно", "window-close", kde("kwin", "Window Close")),
-    ("show_desktop", "Окна", "Показать рабочий стол", "user-desktop", kde("kwin", "Show Desktop")),
-    ("desk_next", "Окна", "Следующий рабочий стол", "go-next", kde("kwin", "Switch One Desktop to the Right")),
-    ("desk_prev", "Окна", "Предыдущий рабочий стол", "go-previous", kde("kwin", "Switch One Desktop to the Left")),
-    ("vol_up", "Звук и музыка", "Громче", "audio-volume-high", "KEY_VOLUMEUP"),
-    ("vol_down", "Звук и музыка", "Тише", "audio-volume-low", "KEY_VOLUMEDOWN"),
-    ("mute", "Звук и музыка", "Выключить звук", "audio-volume-muted", "KEY_MUTE"),
-    ("play", "Звук и музыка", "Пауза / играть", "media-playback-start", "KEY_PLAYPAUSE"),
-    ("next_track", "Звук и музыка", "Следующий трек", "media-skip-forward", "KEY_NEXTSONG"),
-    ("prev_track", "Звук и музыка", "Предыдущий трек", "media-skip-backward", "KEY_PREVIOUSSONG"),
-    ("mic", "Звук и музыка", "Микрофон вкл/выкл (с вибрацией)", "microphone-sensitivity-muted",
+    ("back", "Navigation", "Back", "go-previous", "BTN_SIDE"),
+    ("forward", "Navigation", "Forward", "go-next", "BTN_EXTRA"),
+    ("tab_new", "Tabs", "New tab", "tab-new", "C-t"),
+    ("tab_close", "Tabs", "Close tab", "tab-close", "C-w"),
+    ("tab_reopen", "Tabs", "Reopen closed tab", "edit-undo", "C-Shift-t"),
+    ("tab_next", "Tabs", "Next tab", "go-next-view", "C-tab", ["C-pagedown"]),
+    ("tab_prev", "Tabs", "Previous tab", "go-previous-view", "C-Shift-tab", ["C-pageup"]),
+    ("overview", "Windows", "Window overview", "view-grid", kde("kwin", "Overview"), ["Super-w"]),
+    ("maximize", "Windows", "Maximize window", "window-maximize", kde("kwin", "Window Maximize"), ["Super-pageup"]),
+    ("minimize", "Windows", "Minimize window", "window-minimize", kde("kwin", "Window Minimize"), ["Super-pagedown"]),
+    ("tile_left", "Windows", "Tile window left", "view-split-left-right", kde("kwin", "Window Quick Tile Left"), ["Super-left"]),
+    ("tile_right", "Windows", "Tile window right", "view-split-left-right", kde("kwin", "Window Quick Tile Right"), ["Super-right"]),
+    ("close_window", "Windows", "Close window", "window-close", kde("kwin", "Window Close")),
+    ("show_desktop", "Windows", "Show desktop", "user-desktop", kde("kwin", "Show Desktop")),
+    ("desk_next", "Windows", "Next desktop", "go-next", kde("kwin", "Switch One Desktop to the Right")),
+    ("desk_prev", "Windows", "Previous desktop", "go-previous", kde("kwin", "Switch One Desktop to the Left")),
+    ("vol_up", "Sound & music", "Volume up", "audio-volume-high", "KEY_VOLUMEUP"),
+    ("vol_down", "Sound & music", "Volume down", "audio-volume-low", "KEY_VOLUMEDOWN"),
+    ("mute", "Sound & music", "Mute", "audio-volume-muted", "KEY_MUTE"),
+    ("play", "Sound & music", "Play / pause", "media-playback-start", "KEY_PLAYPAUSE"),
+    ("next_track", "Sound & music", "Next track", "media-skip-forward", "KEY_NEXTSONG"),
+    ("prev_track", "Sound & music", "Previous track", "media-skip-backward", "KEY_PREVIOUSSONG"),
+    ("mic", "Sound & music", "Toggle microphone (with haptics)", "microphone-sensitivity-muted",
      ["KEY_MICMUTE", launch(os.path.join(HOME_BIN, "mic-buzz"))]),
-    ("copy", "Правка", "Копировать", "edit-copy", "C-c"),
-    ("paste", "Правка", "Вставить", "edit-paste", "C-v"),
-    ("cut", "Правка", "Вырезать", "edit-cut", "C-x"),
-    ("undo", "Правка", "Отменить", "edit-undo", "C-z"),
-    ("redo", "Правка", "Повторить", "edit-redo", "C-Shift-z"),
-    ("save", "Правка", "Сохранить", "document-save", "C-s"),
-    ("find", "Правка", "Найти", "edit-find", "C-f"),
-    ("ring", "Система", "Кольцо действий", "view-app-grid", launch(os.path.join(HOME_BIN, "actions-ring"), "show")),
-    ("screenshot", "Система", "Скриншот области", "spectacle", launch("spectacle", "--region")),
-    ("smartshift", "Система", "Колесо: щелчки ↔ свободное", "input-mouse",
+    ("copy", "Editing", "Copy", "edit-copy", "C-c"),
+    ("paste", "Editing", "Paste", "edit-paste", "C-v"),
+    ("cut", "Editing", "Cut", "edit-cut", "C-x"),
+    ("undo", "Editing", "Undo", "edit-undo", "C-z"),
+    ("redo", "Editing", "Redo", "edit-redo", "C-Shift-z"),
+    ("save", "Editing", "Save", "document-save", "C-s"),
+    ("find", "Editing", "Find", "edit-find", "C-f"),
+    ("ring", "System", "Actions Ring", "view-app-grid", launch(os.path.join(HOME_BIN, "actions-ring"), "show")),
+    ("screenshot", "System", "Area screenshot", "spectacle", launch("spectacle", "--region")),
+    ("smartshift", "System", "Wheel: ratchet ↔ free spin", "input-mouse",
      launch(os.path.join(HOME_BIN, "mousectl"), "wheel", "toggle")),
-    ("krunner", "Система", "Поиск KRunner", "search", kde("org_kde_krunner_desktop", "_launch")),
-    ("lock", "Система", "Заблокировать экран", "system-lock-screen", kde("ksmserver", "Lock Session")),
+    ("krunner", "System", "KRunner search", "search", kde("org_kde_krunner_desktop", "_launch")),
+    ("lock", "System", "Lock screen", "system-lock-screen", kde("ksmserver", "Lock Session")),
 ]
 CAT_BY_ID = {c[0]: c for c in CATALOG}
 
-# «Все приложения» по умолчанию — и для «Сбросить», и чтобы дозаполнить старый конфиг
+# "All applications" defaults — used by "Reset" and to fill in an old config
 DEFAULTS = {
     "F13": "overview", "F14": "maximize", "F15": "minimize", "F16": "tile_left", "F17": "tile_right",
     "F23": "back", "F24": "vol_up", "KEY_FN_F1": "vol_down", "KEY_FN_F2": None, "KEY_FN_F3": None,
@@ -111,11 +111,11 @@ def match_catalog(v):
 
 
 def describe(v):
-    """Короткое описание значения xremap — для комментария в конфиге."""
+    """Short description of an xremap value — for the comment in the config."""
     if v is None:
-        return "как во «Всех приложениях»"
+        return "same as in All applications"
     if v == []:
-        return "ничего"
+        return "nothing"
     if (cid := match_catalog(v)):
         return CAT_BY_ID[cid][2]
     if isinstance(v, str):
@@ -123,17 +123,17 @@ def describe(v):
     if isinstance(v, dict) and "launch" in v:
         argv = v["launch"]
         if argv[:2] == ["kstart", "--application"]:
-            return "запуск " + argv[-1]
+            return "launch " + argv[-1]
         if argv[:2] == KGA:
             return "KDE: " + argv[-1]
-        return "запуск " + os.path.basename(argv[0])
+        return "launch " + os.path.basename(argv[0])
     if isinstance(v, list) and v and isinstance(v[0], str) and len(v) == 2:
-        return "серия"
-    return "своё"
+        return "sequence"
+    return "custom"
 
 
 def wheel_tabs(prev, nxt):
-    """Боковое колесо: 1 переключение на 4 щелчка (3 вложенных remap глотают следующие щелчки)."""
+    """Thumb wheel: one switch per 4 clicks (3 nested remaps swallow the following clicks)."""
     def side(key, combo):
         inner = {"remap": {key: []}, "timeout_millis": 400}
         mid = {"remap": {key: inner}, "timeout_millis": 400}
@@ -151,7 +151,7 @@ def to_ui(key, remap, is_default):
             return {"kind": "tabs", "prev": left[0], "next": right[0]}
         if left == [] and right == []:
             return {"kind": "scroll"}
-        return {"kind": "raw", "raw": {k: remap[k] for k in remap if "SCROLL" in k}, "label": "своё"}
+        return {"kind": "raw", "raw": {k: remap[k] for k in remap if "SCROLL" in k}, "label": "custom"}
     if key not in remap:
         return {"kind": "nothing" if is_default else "default"}
     v = remap[key]
@@ -178,7 +178,7 @@ def from_ui(key, a, remap, is_default):
         if kind == "tabs":
             remap["XLEFTSCROLL"], remap["XRIGHTSCROLL"] = wheel_tabs(a.get("prev") or "C-Shift-tab",
                                                                      a.get("next") or "C-tab")
-            remap["XHIRES_LEFTSCROLL"] = []    # плавная прокрутка не должна просачиваться
+            remap["XHIRES_LEFTSCROLL"] = []    # smooth scrolling must not leak through
             remap["XHIRES_RIGHTSCROLL"] = []
         elif kind == "raw":
             remap.update(a["raw"])
@@ -202,7 +202,7 @@ def from_ui(key, a, remap, is_default):
 
 
 def app_regexes(app_id, wmclass=""):
-    """Окна приложения: по id .desktop (без хвоста-хеша) и StartupWMClass, без учёта регистра."""
+    """App windows: by .desktop id (without the hash suffix) and StartupWMClass, case-insensitive."""
     names = []
     for n in (re.sub(r"\._[0-9a-f]{16,}$", "", app_id), wmclass):
         if n and n.lower() not in [x.lower() for x in names]:
@@ -218,14 +218,14 @@ def profile_icon(apps, desktop):
         except re.error:
             continue
         hits = [d for d in desktop if r.search(d["id"]) or (d.get("wmclass") and r.search(d["wmclass"]))]
-        if hits:                        # самый короткий id — сама программа, а не её веб-ярлыки
+        if hits:                        # the shortest id is the program itself, not its web shortcuts
             return min(hits, key=lambda d: len(d["id"]))["icon"]
     return "application-x-executable"
 
 
 def load_profiles(cfg, desktop):
-    """config.yml → профили. Старый формат (несколько групп без application, Super-Shift-s)
-    сводится в «Все приложения»; недостающие кнопки там дозаполняются из DEFAULTS."""
+    """config.yml → profiles. The old format (several groups without application, Super-Shift-s)
+    collapses into "All applications"; missing buttons there are filled in from DEFAULTS."""
     apps, default_remap = [], {}
     for km in cfg.get("keymap", []):
         remap = {OLD_KEYS.get(k, k): v for k, v in (km.get("remap") or {}).items()}
@@ -233,7 +233,7 @@ def load_profiles(cfg, desktop):
         if only:
             apps.append({"name": km.get("name", ""), "apps": only, "remap": remap})
         else:
-            for k, v in remap.items():       # раньше заданное выигрывает, как в xremap
+            for k, v in remap.items():       # earlier settings win, as in xremap
                 default_remap.setdefault(k, v)
     for k, cid in DEFAULTS.items():
         if k not in default_remap:
@@ -261,11 +261,11 @@ def build_keymap(profiles, desktop):
             d = by_id.get(p["app"], {})
             apps = app_regexes(p["app"], d.get("wmclass", ""))
         if not is_default and not apps:
-            continue                    # профиль без окон стал бы общим для всех окон
+            continue                    # a profile without windows would apply to every window
         remap = dict(p.get("extra") or {})
         for k in KEYS:
             from_ui(k, (p.get("keys") or {}).get(k) or {"kind": "default"}, remap, is_default)
-        km = {"name": p.get("name") or "Без названия"}
+        km = {"name": p.get("name") or "Untitled"}
         if not is_default:
             km["application"] = {"only": apps}
         km["remap"] = remap
@@ -274,7 +274,7 @@ def build_keymap(profiles, desktop):
 
 
 def yq(s):
-    """Скаляр YAML: простые строки как есть, остальное — в двойных кавычках (JSON совместим с YAML)."""
+    """YAML scalar: plain strings as is, everything else in double quotes (JSON is valid YAML)."""
     return s if re.fullmatch(r"[A-Za-z][A-Za-z0-9_\-]*", s) and s.lower() not in (
         "yes", "no", "on", "off", "true", "false", "null") else json.dumps(s, ensure_ascii=False)
 
@@ -282,12 +282,12 @@ def yq(s):
 def dump_config(keymap):
     import yaml
     from datetime import date
-    label = dict(SLOT_LABEL, XLEFTSCROLL="Боковое колесо ←", XRIGHTSCROLL="Боковое колесо →")
+    label = dict(SLOT_LABEL, XLEFTSCROLL="Thumb wheel ←", XRIGHTSCROLL="Thumb wheel →")
     lines = [
-        f"# Кнопки MX Master 4 по приложениям — пишет вкладка «Кнопки» виджета (mousectl bindings set), {date.today()}.",
-        "# logid (/etc/logid.cfg) шлёт с каждой кнопки и жеста свою «пустую» клавишу (F13–F24, KEY_FN_F1–F5),",
-        "# здесь им задаётся смысл. Профили приложений идут первыми; чего в профиле нет — берётся из",
-        "# последнего блока «Все приложения». Руками править можно, виджет файл читает.",
+        f'# MX Master 4 per-app buttons — written by the "Buttons" tab of the widget (mousectl bindings set), {date.today()}.',
+        "# logid (/etc/logid.cfg) sends its own spare key from every button and gesture (F13–F24, KEY_FN_F1–F5),",
+        "# this file gives them meaning. App profiles come first; whatever a profile lacks is taken from",
+        "# the last All applications block. You can edit it by hand, the widget reads the file.",
         "keymap:",
     ]
     for g in keymap:

@@ -1,6 +1,6 @@
 # MX Master 4 for KDE Plasma (CachyOS / Arch)
 
-[Русская версия](README.ru.md)
+[Russian version](README.ru.md)
 
 Logitech's Options+ doesn't exist on Linux. This project brings the most useful parts of it to
 KDE Plasma 6 on Wayland for the **Logitech MX Master 4**:
@@ -29,7 +29,7 @@ KDE Plasma 6 on Wayland for the **Logitech MX Master 4**:
   <img src="docs/settings.png" width="32%" alt="Settings tab: DPI, haptics, SmartShift">
 </p>
 
-The UI is in Russian for now; translations are welcome.
+The UI is in English.
 
 ## Requirements
 

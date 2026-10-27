@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# mx-master-4-kde-cachy — удаление. Пакеты (logiops, xremap) и настройки в ~/.config не трогает.
+# mx-master-4-kde-cachy — removal. Leaves packages (logiops, xremap) and settings in ~/.config alone.
 set -euo pipefail
 
 BIN="$HOME/.local/bin"
@@ -16,7 +16,7 @@ sudo udevadm control --reload
 
 latest_backup="$(ls -1t /etc/logid.cfg.bak-* 2>/dev/null | head -1 || true)"
 if [[ -n "$latest_backup" ]]; then
-    echo "Предыдущий конфиг logid: $latest_backup"
-    echo "Вернуть его: sudo cp '$latest_backup' /etc/logid.cfg && sudo systemctl restart logid"
+    echo "Previous logid config: $latest_backup"
+    echo "Restore it: sudo cp '$latest_backup' /etc/logid.cfg && sudo systemctl restart logid"
 fi
-echo "Удалено. Настройки остались в ~/.config/xremap, ~/.config/actions-ring, ~/.config/mousectl."
+echo "Removed. Settings are kept in ~/.config/xremap, ~/.config/actions-ring, ~/.config/mousectl."

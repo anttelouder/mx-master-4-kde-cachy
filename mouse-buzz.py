@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""Вибро-сигнал на MX Master 4 напрямую через HID++ (без solaar, ~10 мс вместо 2,5 с).
+"""Haptic signal on the MX Master 4 directly over HID++ (no solaar, ~10 ms instead of 2.5 s).
 
-    mouse-buzz [СИГНАЛ]      по умолчанию COMPLETED
+    mouse-buzz [WAVEFORM]      COMPLETED by default
     mouse-buzz --list
 
-Шлёт функцию 4 (play waveform) фичи HAPTIC (0x19B0) — то же, что делает
-`solaar config <мышь> haptic-play <сигнал>`. Протокол и поиск мыши — в hidpp.py.
-Если мыши нет (спит, выключена, другая машина) — молча выходит с кодом 1.
+Sends function 4 (play waveform) of the HAPTIC feature (0x19B0) — the same as
+`solaar config <mouse> haptic-play <waveform>`. Protocol and mouse discovery — in hidpp.py.
+If there is no mouse (asleep, switched off, another machine) — exits silently with code 1.
 """
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))  # запуск через ссылку из ~/.local/bin
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))  # launched through a symlink from ~/.local/bin
 import hidpp  # noqa: E402
 
 WAVEFORMS = {
@@ -33,7 +33,7 @@ def main():
         print("\n".join(WAVEFORMS))
         return 0
     if arg not in WAVEFORMS:
-        print(f"неизвестный сигнал {arg}; mouse-buzz --list", file=sys.stderr)
+        print(f"unknown waveform {arg}; mouse-buzz --list", file=sys.stderr)
         return 2
     try:
         with hidpp.Mouse() as m:

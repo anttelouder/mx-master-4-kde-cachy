@@ -1,6 +1,6 @@
 #!/bin/sh
-# Вибро-отклик после переключения микрофона: выключен — глухой удар, включён — бодрый двойной.
-# Вызывается xremap сразу после KEY_MICMUTE (KDE сам переключает микрофон и показывает OSD).
+# Haptic feedback after toggling the microphone: muted — a dull thud, unmuted — a lively double.
+# Called by xremap right after KEY_MICMUTE (KDE toggles the microphone itself and shows an OSD).
 sleep 0.3
 if wpctl get-volume @DEFAULT_AUDIO_SOURCE@ | grep -q MUTED; then
     exec "$HOME/.local/bin/mouse-buzz" DAMP_COLLISION
