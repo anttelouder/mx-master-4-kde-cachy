@@ -183,6 +183,7 @@ Window {
                 PathAngleArc {
                     centerX: win.outerR; centerY: win.outerR
                     radiusX: win.innerR + 4; radiusY: win.innerR + 4
+                    moveToStart: false  // продолжить контур внешней дуги, иначе вместо клина два сегмента
                     startAngle: -90 + win.step / 2; sweepAngle: -win.step
                 }
             }
